@@ -57,6 +57,7 @@ export interface NutritionCalculation {
   totalCalories: number;
   proteinGrams: number;
   fiberGrams: number;
+  calciumGrams: number;
   minerals: string;
   createdAt?: Date;
 }
@@ -65,12 +66,14 @@ export interface ProgressLog {
   id?: string;
   cattleId: string;
   cattleName: string;
-  periodType: 'weekly' | 'monthly';
+  periodType: 'daily' | 'weekly' | 'monthly';
   periodLabel: string;
+  logDate: string;
   nutritionScore: number;
   mealCompliance: number;
   exerciseMinutes: number;
   observations: string;
+  observationRating?: number;
   createdAt?: Date;
 }
 
