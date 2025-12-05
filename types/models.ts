@@ -42,6 +42,7 @@ export interface PregnancyPlan {
   todo: string;
   nutritionFocus: string;
   calendarDate: string;
+  completed?: boolean;
   createdAt?: Date;
 }
 
