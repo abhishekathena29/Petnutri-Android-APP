@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableWithoutFeedback, View } from 'react-native';
 
 import { SectionCard } from '@/components/ui/section-card';
 import { Tag } from '@/components/ui/tag';
@@ -44,11 +44,21 @@ export default function PregnancyScreen() {
       setForm((prev) => ({ ...prev, cattleId: contextSelectedCattle.id }));
     }
   }, [contextSelectedCattle]);
+
+  // Auto-open pregnancy form modal when tab is accessed
+  useEffect(() => {
+    if (contextSelectedCattle) {
+      // Reset form and show modal when tab is accessed
+      setForm((prev) => ({ ...prev, cattleId: contextSelectedCattle.id }));
+      setShowPregnancyFormModal(true);
+    }
+  }, [contextSelectedCattle]);
   const [todoForm, setTodoForm] = useState(initialTodoForm);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [deletingTodo, setDeletingTodo] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [showPregnancyFormModal, setShowPregnancyFormModal] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTodoDatePicker, setShowTodoDatePicker] = useState(false);
   const [showTodoModal, setShowTodoModal] = useState(false);
@@ -231,6 +241,7 @@ export default function PregnancyScreen() {
         calendarDate: '',
       });
       setForm(initialForm);
+      setShowPregnancyFormModal(false);
     } catch (err) {
       console.error(err);
       setError('Unable to save. Try again.');
@@ -341,92 +352,24 @@ export default function PregnancyScreen() {
     setShowTodoModal(true);
   };
 
+
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.container}>
-        <SectionCard title="Add Pregnant Cattle">
-          <Text style={styles.helper}>Select cattle, trimester, blocked months, and delivery date.</Text>
+        {!contextSelectedCattle ? (
+          <SectionCard title="Pregnancy">
+            <Text style={styles.helper}>Please select a cattle profile to manage pregnancy plans.</Text>
+          </SectionCard>
+        ) : (
+          <>
+            <SectionCard title="Pregnancy Board">
+              <Pressable style={styles.addButton} onPress={() => setShowPregnancyFormModal(true)}>
+                <Ionicons name="add-circle" size={24} color="#0a7ea4" />
+                <Text style={styles.addButtonText}>Add Pregnancy Plan</Text>
+              </Pressable>
+            </SectionCard>
 
-          <View style={styles.labelContainer}>
-            <Text style={styles.label}>Cattle Name</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.cattleScroller}>
-              {herd.length === 0 ? (
-                <Text style={styles.helper}>Create cattle first.</Text>
-              ) : (
-                herd.map((cattle) => (
-                  <Pressable
-                    key={cattle.id}
-                    style={[styles.cattleChip, form.cattleId === cattle.id && styles.cattleChipActive]}
-                    onPress={() => handleChange('cattleId', cattle.id!)}
-                  >
-                    <Text style={[styles.cattleChipText, form.cattleId === cattle.id && styles.cattleChipTextActive]}>
-                      {cattle.name}
-                    </Text>
-                  </Pressable>
-                ))
-              )}
-            </ScrollView>
-          </View>
-
-          <View style={styles.labelContainer}>
-            <Text style={styles.label}>Trimester</Text>
-            <View style={styles.toggleRow}>
-              {trimesters.map((trimester) => (
-                <Pressable
-                  key={trimester}
-                  style={[styles.triChip, form.trimester === trimester && styles.triChipActive]}
-                  onPress={() => handleChange('trimester', trimester)}
-                >
-                  <Text style={[styles.triChipText, form.trimester === trimester && styles.triChipTextActive]}>
-                    {trimester} trimester
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.labelContainer}>
-            <Text style={styles.label}>Month to Block</Text>
-            <Text style={styles.helperText}>Select a range (e.g., Jan to May)</Text>
-            <View style={styles.monthRow}>
-              {months.map((month) => {
-                const isSelected = form.blockedMonths.includes(month);
-                const monthIndex = months.indexOf(month);
-                const firstIndex = form.blockedMonths.length > 0 ? months.indexOf(form.blockedMonths[0]) : -1;
-                const lastIndex =
-                  form.blockedMonths.length > 0 ? months.indexOf(form.blockedMonths[form.blockedMonths.length - 1]) : -1;
-                const isInRange = monthIndex >= firstIndex && monthIndex <= lastIndex && firstIndex !== -1;
-
-                return (
-                  <Pressable key={month} style={[styles.monthChip, isInRange && styles.monthChipActive]} onPress={() => toggleMonth(month)}>
-                    <Text style={[styles.monthChipText, isInRange && styles.monthChipTextActive]}>{month}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-            {form.blockedMonths.length > 0 && (
-              <Text style={styles.selectedMonthsText}>Selected: {formatBlockedMonths(form.blockedMonths.join(','))}</Text>
-            )}
-          </View>
-
-          <View style={styles.labelContainer}>
-            <Text style={styles.label}>Delivery Date</Text>
-            <Pressable style={styles.datePickerButton} onPress={() => openDatePicker('delivery')}>
-              <Text style={[styles.datePickerText, !form.dueDate && styles.datePickerPlaceholder]}>
-                {form.dueDate ? formatDisplayDate(form.dueDate) : 'Select delivery date'}
-              </Text>
-              <Ionicons name="calendar-outline" size={20} color="#64748B" />
-            </Pressable>
-          </View>
-
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-
-          <Pressable style={[styles.primaryButton, saving && { opacity: 0.6 }]} onPress={handleSave} disabled={saving}>
-            <Text style={styles.primaryText}>{saving ? 'Saving…' : 'Add to board'}</Text>
-          </Pressable>
-        </SectionCard>
-
-        <SectionCard title="Pregnancy Board">
+            <SectionCard title="Pregnancy Board">
           {loading ? (
             <ActivityIndicator />
           ) : groupedPlans.length === 0 ? (
@@ -521,7 +464,108 @@ export default function PregnancyScreen() {
             ))
           )}
         </SectionCard>
+          </>
+        )}
       </ScrollView>
+
+      {/* Pregnancy Form Modal */}
+      <Modal visible={showPregnancyFormModal} animationType="slide" onRequestClose={() => setShowPregnancyFormModal(false)}>
+        <SafeAreaView style={styles.modalSafe}>
+          <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.select({ ios: 'padding', default: undefined })}>
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+              <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                <View style={styles.modalHeader}>
+                  <Pressable style={styles.closeButton} onPress={() => { setShowPregnancyFormModal(false); setForm(initialForm); setError(''); }}>
+                    <Ionicons name="close" size={24} color="#64748B" />
+                  </Pressable>
+                  <Text style={styles.modalTitle}>Add Pregnant Cattle</Text>
+                  <View style={{ width: 40 }} />
+                </View>
+
+                <Text style={styles.helper}>Select cattle, trimester, blocked months, and delivery date.</Text>
+
+                <View style={styles.labelContainer}>
+                  <Text style={styles.label}>Cattle Name</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.cattleScroller}>
+                    {herd.length === 0 ? (
+                      <Text style={styles.helper}>Create cattle first.</Text>
+                    ) : (
+                      herd.map((cattle) => (
+                        <Pressable
+                          key={cattle.id}
+                          style={[styles.cattleChip, form.cattleId === cattle.id && styles.cattleChipActive]}
+                          onPress={() => handleChange('cattleId', cattle.id!)}
+                        >
+                          <Text style={[styles.cattleChipText, form.cattleId === cattle.id && styles.cattleChipTextActive]}>
+                            {cattle.name}
+                          </Text>
+                        </Pressable>
+                      ))
+                    )}
+                  </ScrollView>
+                </View>
+
+                <View style={styles.labelContainer}>
+                  <Text style={styles.label}>Trimester</Text>
+                  <View style={styles.toggleRow}>
+                    {trimesters.map((trimester) => (
+                      <Pressable
+                        key={trimester}
+                        style={[styles.triChip, form.trimester === trimester && styles.triChipActive]}
+                        onPress={() => handleChange('trimester', trimester)}
+                      >
+                        <Text style={[styles.triChipText, form.trimester === trimester && styles.triChipTextActive]}>
+                          {trimester} trimester
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+
+                <View style={styles.labelContainer}>
+                  <Text style={styles.label}>Month to Block</Text>
+                  <Text style={styles.helperText}>Select a range (e.g., Jan to May)</Text>
+                  <View style={styles.monthRow}>
+                    {months.map((month) => {
+                      const isSelected = form.blockedMonths.includes(month);
+                      const monthIndex = months.indexOf(month);
+                      const firstIndex = form.blockedMonths.length > 0 ? months.indexOf(form.blockedMonths[0]) : -1;
+                      const lastIndex =
+                        form.blockedMonths.length > 0 ? months.indexOf(form.blockedMonths[form.blockedMonths.length - 1]) : -1;
+                      const isInRange = monthIndex >= firstIndex && monthIndex <= lastIndex && firstIndex !== -1;
+
+                      return (
+                        <Pressable key={month} style={[styles.monthChip, isInRange && styles.monthChipActive]} onPress={() => toggleMonth(month)}>
+                          <Text style={[styles.monthChipText, isInRange && styles.monthChipTextActive]}>{month}</Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                  {form.blockedMonths.length > 0 && (
+                    <Text style={styles.selectedMonthsText}>Selected: {formatBlockedMonths(form.blockedMonths.join(','))}</Text>
+                  )}
+                </View>
+
+                <View style={styles.labelContainer}>
+                  <Text style={styles.label}>Delivery Date</Text>
+                  <Pressable style={styles.datePickerButton} onPress={() => openDatePicker('delivery')}>
+                    <Text style={[styles.datePickerText, !form.dueDate && styles.datePickerPlaceholder]}>
+                      {form.dueDate ? formatDisplayDate(form.dueDate) : 'Select delivery date'}
+                    </Text>
+                    <Ionicons name="calendar-outline" size={20} color="#64748B" />
+                  </Pressable>
+                </View>
+
+                {error ? <Text style={styles.error}>{error}</Text> : null}
+
+                <Pressable style={[styles.primaryButton, saving && { opacity: 0.6 }]} onPress={handleSave} disabled={saving}>
+                  <Text style={styles.primaryText}>{saving ? 'Saving…' : 'Add to board'}</Text>
+                </Pressable>
+              </ScrollView>
+            </TouchableWithoutFeedback>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </Modal>
 
       {/* Delivery Date Picker Modal */}
       <Modal visible={showDatePicker} transparent animationType="fade" onRequestClose={() => setShowDatePicker(false)}>

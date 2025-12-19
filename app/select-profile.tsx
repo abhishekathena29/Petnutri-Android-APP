@@ -26,18 +26,18 @@ import { CattleCategory, CattleProfile } from '@/types/models';
 
 const defaultForm = {
   name: '',
-  tagId: '',
   type: 'cow' as CattleCategory,
-  vaccinated: true,
-  country: '',
   breed: '',
-  weightKg: '',
-  heightCm: '',
   ageYears: '',
-  dietGoal: '',
-  healthStatus: 'excellent',
-  lastVetVisit: '',
-  notes: '',
+  sex: 'male' as 'male' | 'female',
+  weightUnit: 'kg' as 'kg' | 'lbs',
+  weightValue: '',
+  heightUnit: 'cm' as 'hands' | 'cm',
+  heightValue: '',
+  vaccinated: true,
+  femaleStatus: 'notPregnant' as 'pregnant' | 'notPregnant' | 'lactating',
+  activityLevel: 'maintenance' as 'maintenance' | 'lightWork' | 'moderateWork' | 'heavyWork',
+  climateRegion: '',
 };
 
 export default function SelectProfileScreen() {
@@ -47,8 +47,34 @@ export default function SelectProfileScreen() {
   const [form, setForm] = useState<typeof defaultForm>(defaultForm);
   const [creating, setCreating] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showClimatePicker, setShowClimatePicker] = useState(false);
+  const [showPregnancyModal, setShowPregnancyModal] = useState(false);
   const [error, setError] = useState('');
+
+  // Pregnancy form state
+  const [pregnancyForm, setPregnancyForm] = useState({
+    pregnancyDate: '',
+    dueDate: '',
+    trimester: 'early' as 'early' | 'mid' | 'late',
+    blockedMonths: [] as string[],
+  });
+  const [showPregnancyDatePicker, setShowPregnancyDatePicker] = useState(false);
+  const [pregnancyDateYear, setPregnancyDateYear] = useState(new Date().getFullYear());
+  const [pregnancyDateMonth, setPregnancyDateMonth] = useState(new Date().getMonth());
+  const [pregnancyDateDay, setPregnancyDateDay] = useState(new Date().getDate());
+  const pregnancyMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  const climateRegions = [
+    'Tropical',
+    'Subtropical',
+    'Temperate',
+    'Continental',
+    'Arid',
+    'Semi-arid',
+    'Mediterranean',
+    'Polar',
+    'Highland',
+  ];
 
   // Clear selected cattle when entering this page to force user to explicitly select
   useEffect(() => {
@@ -65,29 +91,53 @@ export default function SelectProfileScreen() {
     }
   };
 
-  // Date picker state
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 30 }, (_, i) => currentYear - i);
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
-  const [selectedDay, setSelectedDay] = useState(new Date().getDate());
-
-  const getDaysInMonth = (year: number, month: number) => {
-    return new Date(year, month + 1, 0).getDate();
-  };
-
-  const days = Array.from({ length: getDaysInMonth(selectedYear, selectedMonth) }, (_, i) => i + 1);
-
-  const handleChange = (field: keyof typeof defaultForm, value: string | boolean) => {
+  const handleChange = (field: keyof typeof defaultForm, value: string | boolean | 'male' | 'female' | 'hands' | 'cm' | 'kg' | 'lbs' | 'pregnant' | 'notPregnant' | 'lactating' | 'maintenance' | 'lightWork' | 'moderateWork' | 'heavyWork') => {
     setForm((prev) => ({ ...prev, [field]: value }));
     if (error) setError('');
+    
+    // If user selects "pregnant", show pregnancy form modal
+    if (field === 'femaleStatus' && value === 'pregnant') {
+      setShowPregnancyModal(true);
+    }
   };
 
-  const handleDateConfirm = () => {
-    const formattedDate = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`;
-    handleChange('lastVetVisit', formattedDate);
-    setShowDatePicker(false);
+  const togglePregnancyMonth = (month: string) => {
+    setPregnancyForm((prev) => {
+      const currentMonths = prev.blockedMonths;
+      if (currentMonths.includes(month)) {
+        return { ...prev, blockedMonths: currentMonths.filter((m) => m !== month) };
+      } else {
+        if (currentMonths.length === 0) {
+          return { ...prev, blockedMonths: [month] };
+        }
+        const monthIndex = pregnancyMonths.indexOf(month);
+        const firstIndex = pregnancyMonths.indexOf(currentMonths[0]);
+        const lastIndex = pregnancyMonths.indexOf(currentMonths[currentMonths.length - 1]);
+
+        if (monthIndex < firstIndex) {
+          const newMonths = [];
+          for (let i = monthIndex; i <= lastIndex; i++) {
+            newMonths.push(pregnancyMonths[i]);
+          }
+          return { ...prev, blockedMonths: newMonths };
+        } else if (monthIndex > lastIndex) {
+          const newMonths = [...currentMonths];
+          for (let i = lastIndex + 1; i <= monthIndex; i++) {
+            newMonths.push(pregnancyMonths[i]);
+          }
+          return { ...prev, blockedMonths: newMonths };
+        } else {
+          return { ...prev, blockedMonths: currentMonths.slice(0, currentMonths.indexOf(month) + 1) };
+        }
+      }
+    });
+  };
+
+  const formatBlockedMonths = (monthsString: string) => {
+    const monthArray = monthsString.split(',').map((m) => m.trim());
+    if (monthArray.length === 0) return '—';
+    if (monthArray.length === 1) return monthArray[0];
+    return `${monthArray[0]} to ${monthArray[monthArray.length - 1]}`;
   };
 
   const formatDisplayDate = (dateString: string) => {
@@ -100,19 +150,99 @@ export default function SelectProfileScreen() {
     });
   };
 
-  const openDatePicker = () => {
-    if (form.lastVetVisit) {
-      const date = new Date(form.lastVetVisit);
-      setSelectedYear(date.getFullYear());
-      setSelectedMonth(date.getMonth());
-      setSelectedDay(date.getDate());
+  const calculateBlockedMonths = (pregnancyDateStr: string, trimester: 'early' | 'mid' | 'late') => {
+    if (!pregnancyDateStr) return [];
+    
+    const pregnancyDate = new Date(pregnancyDateStr);
+    const blockedMonths: string[] = [];
+    
+    // Calculate months based on trimester
+    // Early: months 0-3, Mid: months 3-6, Late: months 6-9
+    let startMonth = 0;
+    let endMonth = 3;
+    
+    if (trimester === 'mid') {
+      startMonth = 3;
+      endMonth = 6;
+    } else if (trimester === 'late') {
+      startMonth = 6;
+      endMonth = 9;
     }
-    setShowDatePicker(true);
+    
+    // Calculate expected delivery date (pregnancy date + 9 months)
+    const expectedDeliveryDate = new Date(pregnancyDate);
+    expectedDeliveryDate.setMonth(expectedDeliveryDate.getMonth() + 9);
+    
+    // Get all months from pregnancy date to expected delivery
+    const currentDate = new Date(pregnancyDate);
+    const allMonths: string[] = [];
+    
+    for (let i = 0; i <= 9; i++) {
+      const monthDate = new Date(pregnancyDate);
+      monthDate.setMonth(monthDate.getMonth() + i);
+      const monthName = monthDate.toLocaleDateString('en-US', { month: 'short' });
+      allMonths.push(monthName);
+    }
+    
+    // Get blocked months based on trimester
+    for (let i = startMonth; i < endMonth; i++) {
+      const monthDate = new Date(pregnancyDate);
+      monthDate.setMonth(monthDate.getMonth() + i);
+      const monthName = monthDate.toLocaleDateString('en-US', { month: 'short' });
+      if (!blockedMonths.includes(monthName)) {
+        blockedMonths.push(monthName);
+      }
+    }
+    
+    return blockedMonths;
   };
+
+  const calculateExpectedDeliveryDate = (pregnancyDateStr: string) => {
+    if (!pregnancyDateStr) return '';
+    const pregnancyDate = new Date(pregnancyDateStr);
+    const expectedDate = new Date(pregnancyDate);
+    expectedDate.setMonth(expectedDate.getMonth() + 9);
+    return expectedDate.toISOString().split('T')[0];
+  };
+
+  const handlePregnancyDateConfirm = () => {
+    const formattedDate = `${pregnancyDateYear}-${String(pregnancyDateMonth + 1).padStart(2, '0')}-${String(pregnancyDateDay).padStart(2, '0')}`;
+    const blockedMonths = calculateBlockedMonths(formattedDate, pregnancyForm.trimester);
+    const dueDate = calculateExpectedDeliveryDate(formattedDate);
+    
+    setPregnancyForm((prev) => ({ 
+      ...prev, 
+      pregnancyDate: formattedDate,
+      dueDate: dueDate,
+      blockedMonths: blockedMonths 
+    }));
+    setShowPregnancyDatePicker(false);
+    
+    // Update selected date picker values if pregnancy date exists
+    if (formattedDate) {
+      const date = new Date(formattedDate);
+      setPregnancyDateYear(date.getFullYear());
+      setPregnancyDateMonth(date.getMonth());
+      setPregnancyDateDay(date.getDate());
+    }
+  };
+
+  // Update blocked months when trimester changes
+  useEffect(() => {
+    if (pregnancyForm.pregnancyDate) {
+      const blockedMonths = calculateBlockedMonths(pregnancyForm.pregnancyDate, pregnancyForm.trimester);
+      setPregnancyForm((prev) => ({ ...prev, blockedMonths }));
+    }
+  }, [pregnancyForm.trimester]);
+
+  const getDaysInMonth = (year: number, month: number) => {
+    return new Date(year, month + 1, 0).getDate();
+  };
+
 
   const resetForm = () => {
     setForm({ ...defaultForm });
-    setShowDatePicker(false);
+    setPregnancyForm({ pregnancyDate: '', dueDate: '', trimester: 'early', blockedMonths: [] });
   };
 
   const handleCreate = async () => {
@@ -125,15 +255,53 @@ export default function SelectProfileScreen() {
     setError('');
     try {
       const cattleName = form.name.trim();
-      await addUserDocument(user.uid, 'cattle', {
-        ...form,
-        weightKg: Number(form.weightKg) || 0,
-        heightCm: Number(form.heightCm) || 0,
+      const profileData: any = {
+        name: cattleName,
+        type: form.type,
+        breed: form.breed.trim(),
         ageYears: Number(form.ageYears) || 0,
-      });
+        sex: form.sex,
+        weightUnit: form.weightUnit,
+        weightValue: Number(form.weightValue) || 0,
+        heightUnit: form.heightUnit,
+        heightValue: Number(form.heightValue) || 0,
+        vaccinated: form.vaccinated,
+        activityLevel: form.activityLevel,
+        climateRegion: form.climateRegion,
+      };
+      
+      // Only include femaleStatus if sex is female
+      if (form.sex === 'female') {
+        profileData.femaleStatus = form.femaleStatus;
+      }
+      
+      // Create the cattle profile
+      const cattleRef = await addUserDocument(user.uid, 'cattle', profileData);
+      const cattleId = cattleRef.id;
+      
+      // If female and pregnant, and pregnancy form is filled, create pregnancy plan
+      if (form.sex === 'female' && form.femaleStatus === 'pregnant' && pregnancyForm.pregnancyDate && pregnancyForm.blockedMonths.length > 0) {
+        try {
+          await addUserDocument(user.uid, 'pregnancy', {
+            cattleId: cattleId,
+            cattleName: cattleName,
+            dueDate: pregnancyForm.dueDate || calculateExpectedDeliveryDate(pregnancyForm.pregnancyDate),
+            trimester: pregnancyForm.trimester,
+            blockedMonth: pregnancyForm.blockedMonths.join(','),
+            todo: '',
+            nutritionFocus: '',
+            calendarDate: '',
+          });
+        } catch (pregnancyErr) {
+          console.error('Failed to save pregnancy plan:', pregnancyErr);
+          // Don't fail the whole operation if pregnancy save fails
+        }
+      }
       
       resetForm();
       setShowCreateModal(false);
+      setShowPregnancyModal(false);
+      setPregnancyForm({ pregnancyDate: '', dueDate: '', trimester: 'early', blockedMonths: [] });
       
       // The cattle list will refresh automatically via useUserCollection
       // We'll need to wait for it to update, then select the new cattle
@@ -156,16 +324,6 @@ export default function SelectProfileScreen() {
     return type === 'cow' ? '🐄' : '🐴';
   };
 
-  const getHealthColor = (status: string) => {
-    switch (status) {
-      case 'excellent':
-        return '#10B981';
-      case 'good':
-        return '#F59E0B';
-      default:
-        return '#EF4444';
-    }
-  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -228,7 +386,7 @@ export default function SelectProfileScreen() {
                   <View style={styles.profileInfo}>
                     <View style={styles.profileHeader}>
                       <Text style={styles.profileName}>{item.name}</Text>
-                      <View style={[styles.healthDot, { backgroundColor: getHealthColor(item.healthStatus) }]} />
+                      <Text style={styles.profileSex}>{item.sex === 'male' ? '♂' : '♀'}</Text>
                     </View>
                     <Text style={styles.profileBreed}>{item.breed || 'Unknown breed'}</Text>
                     <View style={styles.profileMeta}>
@@ -240,10 +398,11 @@ export default function SelectProfileScreen() {
                         <Ionicons name="calendar-outline" size={14} color="#64748B" />
                         <Text style={styles.metaText}>{item.ageYears || '—'} yrs</Text>
                       </View>
-                      {item.vaccinated && (
-                        <View style={styles.vaccinatedBadge}>
-                          <Ionicons name="shield-checkmark" size={12} color="#10B981" />
-                          <Text style={styles.vaccinatedText}>Vaccinated</Text>
+                      {item.sex === 'female' && item.femaleStatus && (
+                        <View style={styles.femaleStatusBadge}>
+                          <Text style={styles.femaleStatusText}>
+                            {item.femaleStatus === 'pregnant' ? '🤰' : item.femaleStatus === 'lactating' ? '🥛' : ''}
+                          </Text>
                         </View>
                       )}
                     </View>
@@ -263,7 +422,10 @@ export default function SelectProfileScreen() {
             <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
               <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                 <View style={styles.modalHeader}>
-                  <Pressable style={styles.closeButton} onPress={() => { setShowCreateModal(false); resetForm(); }}>
+                  <Pressable style={styles.closeButton} onPress={() => { 
+                    setShowCreateModal(false); 
+                    resetForm();
+                  }}>
                     <Ionicons name="close" size={24} color="#64748B" />
                   </Pressable>
                   <Text style={styles.modalTitle}>Create Cattle Profile</Text>
@@ -288,59 +450,138 @@ export default function SelectProfileScreen() {
                 <View style={styles.formSection}>
                   <Text style={styles.formSectionTitle}>Basic Information</Text>
                   <FormField label="Name" placeholder="Luna, Bolt..." value={form.name} onChangeText={(text) => handleChange('name', text)} />
-                  <FormField label="Tag ID" placeholder="#FR-221" value={form.tagId} onChangeText={(text) => handleChange('tagId', text)} />
-                  <FormField label="Country" placeholder="Canada" value={form.country} onChangeText={(text) => handleChange('country', text)} />
                   <FormField label="Breed" placeholder="Holstein Friesian" value={form.breed} onChangeText={(text) => handleChange('breed', text)} />
+                  <FormField
+                    label="Age (years)"
+                    placeholder="3"
+                    keyboardType="numeric"
+                    value={form.ageYears}
+                    onChangeText={(text) => handleChange('ageYears', text)}
+                  />
+                </View>
+
+                <View style={styles.formSection}>
+                  <Text style={styles.formSectionTitle}>Sex</Text>
+                  <View style={styles.toggleRow}>
+                    {(['male', 'female'] as const).map((sex) => (
+                      <Pressable
+                        key={sex}
+                        style={[styles.toggleChip, form.sex === sex && styles.toggleChipActive]}
+                        onPress={() => handleChange('sex', sex)}
+                      >
+                        <Text style={[styles.toggleText, form.sex === sex && styles.toggleTextActive]}>
+                          {sex === 'male' ? '♂ Male' : '♀ Female'}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
                 </View>
 
                 <View style={styles.formSection}>
                   <Text style={styles.formSectionTitle}>Physical Details</Text>
                   <View style={styles.row}>
                     <FormField
-                      label="Weight (kg)"
-                      placeholder="550"
+                      label={`Body Weight (${form.weightUnit})`}
+                      placeholder={form.weightUnit === 'kg' ? '550' : '1212'}
                       keyboardType="numeric"
                       style={{ flex: 1 }}
-                      value={form.weightKg}
-                      onChangeText={(text) => handleChange('weightKg', text)}
+                      value={form.weightValue}
+                      onChangeText={(text) => handleChange('weightValue', text)}
                     />
                     <View style={{ width: 12 }} />
-                    <FormField
-                      label="Height (cm)"
-                      placeholder="160"
-                      keyboardType="numeric"
-                      style={{ flex: 1 }}
-                      value={form.heightCm}
-                      onChangeText={(text) => handleChange('heightCm', text)}
-                    />
+                    <View style={{ flex: 1, justifyContent: 'flex-end', paddingBottom: 12 }}>
+                      <View style={styles.toggleRow}>
+                        {(['kg', 'lbs'] as const).map((unit) => (
+                          <Pressable
+                            key={unit}
+                            style={[styles.toggleChipSmall, form.weightUnit === unit && styles.toggleChipActive]}
+                            onPress={() => handleChange('weightUnit', unit)}
+                          >
+                            <Text style={[styles.toggleTextSmall, form.weightUnit === unit && styles.toggleTextActive]}>
+                              {unit.toUpperCase()}
+                            </Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                    </View>
                   </View>
                   <View style={styles.row}>
                     <FormField
-                      label="Age (years)"
-                      placeholder="3"
+                      label={`Height (${form.heightUnit === 'hands' ? 'hands' : 'cm'})`}
+                      placeholder={form.heightUnit === 'hands' ? '15.2' : '160'}
                       keyboardType="numeric"
                       style={{ flex: 1 }}
-                      value={form.ageYears}
-                      onChangeText={(text) => handleChange('ageYears', text)}
+                      value={form.heightValue}
+                      onChangeText={(text) => handleChange('heightValue', text)}
                     />
                     <View style={{ width: 12 }} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.dateLabel}>Last vet visit</Text>
-                      <Pressable style={styles.datePickerButton} onPress={openDatePicker}>
-                        <Ionicons name="calendar-outline" size={20} color="#64748B" />
-                        <Text style={[styles.datePickerText, !form.lastVetVisit && styles.datePickerPlaceholder]}>
-                          {form.lastVetVisit ? formatDisplayDate(form.lastVetVisit) : 'Select date'}
-                        </Text>
-                      </Pressable>
+                    <View style={{ flex: 1, justifyContent: 'flex-end', paddingBottom: 12 }}>
+                      <View style={styles.toggleRow}>
+                        {(['hands', 'cm'] as const).map((unit) => (
+                          <Pressable
+                            key={unit}
+                            style={[styles.toggleChipSmall, form.heightUnit === unit && styles.toggleChipActive]}
+                            onPress={() => handleChange('heightUnit', unit)}
+                          >
+                            <Text style={[styles.toggleTextSmall, form.heightUnit === unit && styles.toggleTextActive]}>
+                              {unit.toUpperCase()}
+                            </Text>
+                          </Pressable>
+                        ))}
+                      </View>
                     </View>
                   </View>
                 </View>
 
+                {form.sex === 'female' && (
+                  <View style={styles.formSection}>
+                    <Text style={styles.formSectionTitle}>Female Status</Text>
+                    <View style={styles.toggleRow}>
+                      {(['pregnant', 'notPregnant', 'lactating'] as const).map((status) => (
+                        <Pressable
+                          key={status}
+                          style={[styles.toggleChip, form.femaleStatus === status && styles.toggleChipActive]}
+                          onPress={() => handleChange('femaleStatus', status)}
+                        >
+                          <Text style={[styles.toggleText, form.femaleStatus === status && styles.toggleTextActive]}>
+                            {status === 'pregnant' ? '🤰 Pregnant' : status === 'lactating' ? '🥛 Lactating' : 'Not Pregnant'}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
                 <View style={styles.formSection}>
-                  <Text style={styles.formSectionTitle}>Care & Notes</Text>
-                  <FormField label="Diet goal" placeholder="High-energy lactation plan" value={form.dietGoal} onChangeText={(text) => handleChange('dietGoal', text)} />
-                  <FormField label="Notes" placeholder="Any special care instructions" value={form.notes} onChangeText={(text) => handleChange('notes', text)} multiline numberOfLines={3} />
-                  
+                  <Text style={styles.formSectionTitle}>Activity Level</Text>
+                  <View style={styles.toggleRow}>
+                    {(['maintenance', 'lightWork', 'moderateWork', 'heavyWork'] as const).map((level) => (
+                      <Pressable
+                        key={level}
+                        style={[styles.toggleChip, form.activityLevel === level && styles.toggleChipActive]}
+                        onPress={() => handleChange('activityLevel', level)}
+                      >
+                        <Text style={[styles.toggleText, form.activityLevel === level && styles.toggleTextActive]}>
+                          {level === 'maintenance' ? 'Maintenance' : level === 'lightWork' ? 'Light Work' : level === 'moderateWork' ? 'Moderate Work' : 'Heavy Work'}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+
+                <View style={styles.formSection}>
+                  <Text style={styles.formSectionTitle}>Climate / Region</Text>
+                  <Pressable style={styles.dropdownButton} onPress={() => setShowClimatePicker(true)}>
+                    <Text style={[styles.dropdownText, !form.climateRegion && styles.dropdownPlaceholder]}>
+                      {form.climateRegion || 'Select climate region'}
+                    </Text>
+                    <Ionicons name="chevron-down" size={20} color="#64748B" />
+                  </Pressable>
+                  <Text style={styles.helperText}>Heat affects water & electrolytes requirements</Text>
+                </View>
+
+                <View style={styles.formSection}>
+                  <Text style={styles.formSectionTitle}>Care</Text>
                   <View style={styles.switchRow}>
                     <View style={styles.switchInfo}>
                       <Ionicons name="shield-checkmark" size={20} color="#10B981" />
@@ -377,13 +618,133 @@ export default function SelectProfileScreen() {
         </SafeAreaView>
       </Modal>
 
-      {/* Date Picker Modal */}
-      <Modal visible={showDatePicker} transparent animationType="fade" onRequestClose={() => setShowDatePicker(false)}>
-        <Pressable style={styles.dateModalOverlay} onPress={() => setShowDatePicker(false)}>
+      {/* Climate Region Picker Modal */}
+      <Modal visible={showClimatePicker} transparent animationType="fade" onRequestClose={() => setShowClimatePicker(false)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setShowClimatePicker(false)}>
+          <Pressable style={styles.pickerModalContent} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.pickerModalHeader}>
+              <Text style={styles.pickerModalTitle}>Select Climate Region</Text>
+              <Pressable onPress={() => setShowClimatePicker(false)}>
+                <Ionicons name="close" size={24} color="#64748B" />
+              </Pressable>
+            </View>
+            <ScrollView style={styles.pickerScrollView} showsVerticalScrollIndicator={false}>
+              {climateRegions.map((region) => (
+                <Pressable
+                  key={region}
+                  style={[styles.pickerOption, form.climateRegion === region && styles.pickerOptionSelected]}
+                  onPress={() => {
+                    handleChange('climateRegion', region);
+                    setShowClimatePicker(false);
+                  }}
+                >
+                  <Text style={[styles.pickerOptionText, form.climateRegion === region && styles.pickerOptionTextSelected]}>
+                    {region}
+                  </Text>
+                  {form.climateRegion === region && (
+                    <Ionicons name="checkmark" size={20} color="#0a7ea4" />
+                  )}
+                </Pressable>
+              ))}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Pregnancy Form Modal */}
+      <Modal visible={showPregnancyModal} animationType="slide" onRequestClose={() => setShowPregnancyModal(false)}>
+        <SafeAreaView style={styles.modalSafe}>
+          <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.select({ ios: 'padding', default: undefined })}>
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+              <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                <View style={styles.modalHeader}>
+                  <Pressable style={styles.closeButton} onPress={() => setShowPregnancyModal(false)}>
+                    <Ionicons name="close" size={24} color="#64748B" />
+                  </Pressable>
+                  <Text style={styles.modalTitle}>Pregnancy Plan</Text>
+                  <View style={{ width: 40 }} />
+                </View>
+                
+                {!pregnancyForm.pregnancyDate && (
+                  <Text style={[styles.helperText, { marginBottom: 16, paddingHorizontal: 4 }]}>
+                    Please select the pregnancy date first. Months will be automatically blocked based on the trimester.
+                  </Text>
+                )}
+
+                <View style={styles.formSection}>
+                  <Text style={styles.formSectionTitle}>Trimester</Text>
+                  <View style={styles.toggleRow}>
+                    {(['early', 'mid', 'late'] as const).map((trimester) => (
+                      <Pressable
+                        key={trimester}
+                        style={[styles.toggleChip, pregnancyForm.trimester === trimester && styles.toggleChipActive]}
+                        onPress={() => setPregnancyForm((prev) => ({ ...prev, trimester }))}
+                      >
+                        <Text style={[styles.toggleText, pregnancyForm.trimester === trimester && styles.toggleTextActive]}>
+                          {trimester.charAt(0).toUpperCase() + trimester.slice(1)}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+
+                <View style={styles.formSection}>
+                  <Text style={styles.formSectionTitle}>Pregnancy Date</Text>
+                  <Pressable style={styles.datePickerButton} onPress={() => setShowPregnancyDatePicker(true)}>
+                    <Text style={[styles.datePickerText, !pregnancyForm.pregnancyDate && styles.datePickerPlaceholder]}>
+                      {pregnancyForm.pregnancyDate ? formatDisplayDate(pregnancyForm.pregnancyDate) : 'Select pregnancy date'}
+                    </Text>
+                    <Ionicons name="calendar-outline" size={20} color="#64748B" />
+                  </Pressable>
+                  {pregnancyForm.dueDate && (
+                    <Text style={styles.helperText}>
+                      Expected Delivery: {formatDisplayDate(pregnancyForm.dueDate)}
+                    </Text>
+                  )}
+                </View>
+
+                <View style={styles.formSection}>
+                  <Text style={styles.formSectionTitle}>Months to Block (Auto-calculated)</Text>
+                  <Text style={styles.helperText}>
+                    Based on {pregnancyForm.trimester} trimester: {pregnancyForm.trimester === 'early' ? 'Months 0-3' : pregnancyForm.trimester === 'mid' ? 'Months 3-6' : 'Months 6-9'}
+                  </Text>
+                  <View style={styles.monthsContainer}>
+                    {pregnancyMonths.map((month) => {
+                      const isBlocked = pregnancyForm.blockedMonths.includes(month);
+                      return (
+                        <Pressable
+                          key={month}
+                          style={[styles.monthChip, isBlocked && styles.monthChipActive]}
+                          disabled={true}
+                        >
+                          <Text style={[styles.monthChipText, isBlocked && styles.monthChipTextActive]}>{month}</Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                  {pregnancyForm.blockedMonths.length > 0 && (
+                    <Text style={styles.selectedMonthsText}>
+                      Blocked Months: {formatBlockedMonths(pregnancyForm.blockedMonths.join(','))}
+                    </Text>
+                  )}
+                </View>
+
+                <Pressable style={styles.secondaryButton} onPress={() => setShowPregnancyModal(false)}>
+                  <Text style={styles.secondaryButtonText}>Done</Text>
+                </Pressable>
+              </ScrollView>
+            </TouchableWithoutFeedback>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </Modal>
+
+      {/* Pregnancy Date Picker Modal */}
+      <Modal visible={showPregnancyDatePicker} transparent animationType="fade" onRequestClose={() => setShowPregnancyDatePicker(false)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setShowPregnancyDatePicker(false)}>
           <Pressable style={styles.dateModalContent} onPress={(e) => e.stopPropagation()}>
             <View style={styles.dateModalHeader}>
-              <Text style={styles.dateModalTitle}>Select Date</Text>
-              <Pressable onPress={() => setShowDatePicker(false)}>
+              <Text style={styles.dateModalTitle}>Select Pregnancy Date</Text>
+              <Pressable onPress={() => setShowPregnancyDatePicker(false)}>
                 <Ionicons name="close" size={24} color="#64748B" />
               </Pressable>
             </View>
@@ -392,13 +753,13 @@ export default function SelectProfileScreen() {
               <View style={styles.dateColumn}>
                 <Text style={styles.dateColumnLabel}>Month</Text>
                 <ScrollView style={styles.dateScrollView} showsVerticalScrollIndicator={false}>
-                  {months.map((month, index) => (
+                  {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((month, index) => (
                     <Pressable
                       key={month}
-                      style={[styles.dateOption, selectedMonth === index && styles.dateOptionSelected]}
-                      onPress={() => setSelectedMonth(index)}
+                      style={[styles.dateOption, pregnancyDateMonth === index && styles.dateOptionSelected]}
+                      onPress={() => setPregnancyDateMonth(index)}
                     >
-                      <Text style={[styles.dateOptionText, selectedMonth === index && styles.dateOptionTextSelected]}>
+                      <Text style={[styles.dateOptionText, pregnancyDateMonth === index && styles.dateOptionTextSelected]}>
                         {month}
                       </Text>
                     </Pressable>
@@ -409,13 +770,13 @@ export default function SelectProfileScreen() {
               <View style={styles.dateColumn}>
                 <Text style={styles.dateColumnLabel}>Day</Text>
                 <ScrollView style={styles.dateScrollView} showsVerticalScrollIndicator={false}>
-                  {days.map((day) => (
+                  {Array.from({ length: getDaysInMonth(pregnancyDateYear, pregnancyDateMonth) }, (_, i) => i + 1).map((day) => (
                     <Pressable
                       key={day}
-                      style={[styles.dateOption, selectedDay === day && styles.dateOptionSelected]}
-                      onPress={() => setSelectedDay(day)}
+                      style={[styles.dateOption, pregnancyDateDay === day && styles.dateOptionSelected]}
+                      onPress={() => setPregnancyDateDay(day)}
                     >
-                      <Text style={[styles.dateOptionText, selectedDay === day && styles.dateOptionTextSelected]}>
+                      <Text style={[styles.dateOptionText, pregnancyDateDay === day && styles.dateOptionTextSelected]}>
                         {day}
                       </Text>
                     </Pressable>
@@ -426,13 +787,13 @@ export default function SelectProfileScreen() {
               <View style={styles.dateColumn}>
                 <Text style={styles.dateColumnLabel}>Year</Text>
                 <ScrollView style={styles.dateScrollView} showsVerticalScrollIndicator={false}>
-                  {years.map((year) => (
+                  {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 1 + i).map((year) => (
                     <Pressable
                       key={year}
-                      style={[styles.dateOption, selectedYear === year && styles.dateOptionTextSelected]}
-                      onPress={() => setSelectedYear(year)}
+                      style={[styles.dateOption, pregnancyDateYear === year && styles.dateOptionTextSelected]}
+                      onPress={() => setPregnancyDateYear(year)}
                     >
-                      <Text style={[styles.dateOptionText, selectedYear === year && styles.dateOptionTextSelected]}>
+                      <Text style={[styles.dateOptionText, pregnancyDateYear === year && styles.dateOptionTextSelected]}>
                         {year}
                       </Text>
                     </Pressable>
@@ -441,7 +802,7 @@ export default function SelectProfileScreen() {
               </View>
             </View>
 
-            <Pressable style={styles.dateConfirmButton} onPress={handleDateConfirm}>
+            <Pressable style={styles.dateConfirmButton} onPress={handlePregnancyDateConfirm}>
               <Text style={styles.dateConfirmText}>Confirm</Text>
             </Pressable>
           </Pressable>
@@ -636,7 +997,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#64748B',
   },
-  vaccinatedBadge: {
+  femaleStatusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
@@ -645,10 +1006,8 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 8,
   },
-  vaccinatedText: {
-    fontSize: 11,
-    color: '#10B981',
-    fontWeight: '600',
+  femaleStatusText: {
+    fontSize: 12,
   },
   modalSafe: {
     flex: 1,
@@ -709,8 +1068,32 @@ const styles = StyleSheet.create({
   toggleTextActive: {
     color: '#0a7ea4',
   },
+  toggleChipSmall: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#fff',
+  },
+  toggleTextSmall: {
+    fontWeight: '600',
+    fontSize: 13,
+    color: '#64748B',
+  },
   formSection: {
     marginBottom: 24,
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#94A3B8',
+    marginTop: 6,
+    fontStyle: 'italic',
   },
   formSectionTitle: {
     fontSize: 14,
@@ -863,5 +1246,193 @@ const styles = StyleSheet.create({
     color: '#DC2626',
     marginBottom: 8,
     textAlign: 'center',
+  },
+  dropdownButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    marginBottom: 6,
+  },
+  dropdownText: {
+    fontSize: 15,
+    color: '#0F172A',
+    flex: 1,
+  },
+  dropdownPlaceholder: {
+    color: '#94A3B8',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  pickerModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 20,
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: '80%',
+  },
+  pickerModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  pickerModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  pickerScrollView: {
+    maxHeight: 400,
+  },
+  pickerOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 4,
+  },
+  pickerOptionSelected: {
+    backgroundColor: '#E0F2FE',
+  },
+  pickerOptionText: {
+    fontSize: 16,
+    color: '#0F172A',
+  },
+  pickerOptionTextSelected: {
+    color: '#0a7ea4',
+    fontWeight: '600',
+  },
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 8,
+  },
+  switchInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  switchLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  datePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    marginBottom: 12,
+  },
+  datePickerText: {
+    fontSize: 15,
+    color: '#0F172A',
+    flex: 1,
+  },
+  datePickerPlaceholder: {
+    color: '#94A3B8',
+  },
+  dateModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 20,
+    width: '100%',
+    maxWidth: 400,
+  },
+  dateModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  dateModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  datePickerRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  dateColumn: {
+    flex: 1,
+  },
+  dateColumnLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#94A3B8',
+    textAlign: 'center',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+  },
+  dateScrollView: {
+    height: 180,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+  },
+  dateOption: {
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+  },
+  dateOptionSelected: {
+    backgroundColor: '#E0F2FE',
+    borderRadius: 8,
+    marginHorizontal: 4,
+  },
+  dateOptionText: {
+    fontSize: 16,
+    color: '#64748B',
+  },
+  dateOptionTextSelected: {
+    color: '#0a7ea4',
+    fontWeight: '700',
+  },
+  dateConfirmButton: {
+    backgroundColor: '#0a7ea4',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  dateConfirmText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  secondaryButton: {
+    backgroundColor: '#F1F5F9',
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  secondaryButtonText: {
+    color: '#0F172A',
+    fontWeight: '700',
+    fontSize: 16,
   },
 });

@@ -3,18 +3,18 @@ export type CattleCategory = 'cow' | 'horse';
 export interface CattleProfile {
   id?: string;
   name: string;
-  tagId?: string;
   type: CattleCategory;
-  vaccinated: boolean;
-  country: string;
   breed: string;
-  weightKg: number;
-  heightCm: number;
   ageYears: number;
-  dietGoal: string;
-  healthStatus: 'excellent' | 'good' | 'monitor';
-  lastVetVisit: string;
-  notes?: string;
+  sex: 'male' | 'female';
+  weightUnit: 'kg' | 'lbs';
+  weightValue: number;
+  heightUnit: 'hands' | 'cm';
+  heightValue: number;
+  vaccinated: boolean;
+  femaleStatus?: 'pregnant' | 'notPregnant' | 'lactating'; // Only if sex === 'female'
+  activityLevel: 'maintenance' | 'lightWork' | 'moderateWork' | 'heavyWork';
+  climateRegion: string;
   createdAt?: Date;
 }
 
