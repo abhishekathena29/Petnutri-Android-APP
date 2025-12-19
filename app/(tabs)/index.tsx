@@ -20,9 +20,11 @@ import {
 import { FormField } from '@/components/ui/form-field';
 import { Tag } from '@/components/ui/tag';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSelectedCattle } from '@/contexts/SelectedCattleContext';
 import { useUserCollection } from '@/hooks/use-user-collection';
 import { addUserDocument, deleteUserDocument, updateUserDocument } from '@/services/firestore';
 import { CattleCategory, CattleProfile } from '@/types/models';
+import { useRouter } from 'expo-router';
 
 const defaultForm = {
   name: '',
@@ -42,6 +44,8 @@ const defaultForm = {
 
 export default function HerdHomeScreen() {
   const { user } = useAuth();
+  const { selectedCattle } = useSelectedCattle();
+  const router = useRouter();
   const { data: cattle, loading } = useUserCollection<CattleProfile>('cattle', { orderByField: 'createdAt' });
   const [form, setForm] = useState<typeof defaultForm>(defaultForm);
   const [creating, setCreating] = useState(false);
@@ -53,16 +57,22 @@ export default function HerdHomeScreen() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState('');
 
+  // Filter to show only selected cattle
+  const filteredCattle = useMemo(() => {
+    if (!selectedCattle) return [];
+    return cattle.filter((c) => c.id === selectedCattle.id);
+  }, [cattle, selectedCattle]);
+
   const grouped = useMemo(() => {
     const base: Record<CattleCategory, Array<CattleProfile & { id: string }>> = {
       cow: [],
       horse: [],
     };
-    cattle.forEach((doc) => {
+    filteredCattle.forEach((doc) => {
       base[doc.type as CattleCategory]?.push(doc as CattleProfile & { id: string });
     });
     return base;
-  }, [cattle]);
+  }, [filteredCattle]);
 
   const handleChange = (field: keyof typeof defaultForm, value: string | boolean) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -243,165 +253,152 @@ export default function HerdHomeScreen() {
         <View style={styles.header}>
           <View>
             <Text style={styles.greeting}>Welcome back 👋</Text>
-            <Text style={styles.title}>Your Herd</Text>
+            <Text style={styles.title}>
+              {selectedCattle ? `${selectedCattle.name}'s Profile` : 'Your Herd'}
+            </Text>
           </View>
-          <View style={styles.statsContainer}>
-            <View style={styles.statBadge}>
-              <Text style={styles.statNumber}>{cattle.length}</Text>
-              <Text style={styles.statLabel}>Total</Text>
+          {selectedCattle && (
+            <View style={styles.statsContainer}>
+              <View style={styles.statBadge}>
+                <Text style={styles.statNumber}>{selectedCattle.type === 'cow' ? '🐄' : '🐴'}</Text>
+                <Text style={styles.statLabel}>{selectedCattle.type === 'cow' ? 'Cow' : 'Horse'}</Text>
+              </View>
             </View>
-          </View>
+          )}
         </View>
 
-        {/* Add New Cattle Card */}
-        <Pressable style={styles.addCard} onPress={() => setShowCreateModal(true)}>
-          <View style={styles.addCardIcon}>
-            <Ionicons name="add" size={32} color="#fff" />
+        {!selectedCattle && (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyIcon}>🐮</Text>
+            <Text style={styles.emptyTitle}>No Profile Selected</Text>
+            <Text style={styles.emptySubtitle}>Please select a cattle profile to view details</Text>
           </View>
-          <View style={styles.addCardContent}>
-            <Text style={styles.addCardTitle}>Create Cattle Profile</Text>
-            <Text style={styles.addCardSubtitle}>Add a new member to your herd</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={24} color="#94A3B8" />
-        </Pressable>
+        )}
 
         {/* Loading State */}
         {loading && (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#0a7ea4" />
-            <Text style={styles.loadingText}>Loading your herd...</Text>
+            <Text style={styles.loadingText}>Loading profile...</Text>
           </View>
         )}
 
-        {/* Empty State */}
-        {!loading && cattle.length === 0 && (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>🐮</Text>
-            <Text style={styles.emptyTitle}>No cattle yet</Text>
-            <Text style={styles.emptySubtitle}>
-              Tap the card above to add your first cattle profile
-            </Text>
-          </View>
-        )}
-
-        {/* Cattle Profiles */}
-        {!loading && cattle.length > 0 && (
+        {/* Cattle Profile Details */}
+        {!loading && selectedCattle && (
           <>
-            {/* Cows Section */}
-            {grouped.cow.length > 0 && (
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>🐄 Cows</Text>
-                  <Tag label={`${grouped.cow.length}`} tone="primary" />
+            <View style={styles.profileDetailCard}>
+              <Pressable style={styles.profileCardContent} onPress={() => setSelected(selectedCattle)}>
+                <View style={[styles.profileAvatar, { backgroundColor: selectedCattle.type === 'cow' ? '#E0F2FE' : '#FEF3C7' }]}>
+                  <Text style={styles.avatarEmoji}>{getCattleIcon(selectedCattle.type)}</Text>
                 </View>
-                {grouped.cow.map((item) => (
-                  <View key={item.id} style={styles.profileCard}>
-                    <Pressable style={styles.profileCardContent} onPress={() => setSelected(item)}>
-                      <View style={styles.profileAvatar}>
-                        <Text style={styles.avatarEmoji}>{getCattleIcon(item.type)}</Text>
-                      </View>
-                      <View style={styles.profileInfo}>
-                        <View style={styles.profileHeader}>
-                          <Text style={styles.profileName}>{item.name}</Text>
-                          <View style={[styles.healthDot, { backgroundColor: getHealthColor(item.healthStatus) }]} />
-                        </View>
-                        <Text style={styles.profileBreed}>{item.breed || 'Unknown breed'}</Text>
-                        <View style={styles.profileMeta}>
-                          <View style={styles.metaItem}>
-                            <Ionicons name="scale-outline" size={14} color="#64748B" />
-                            <Text style={styles.metaText}>{item.weightKg || '—'} kg</Text>
-                          </View>
-                          <View style={styles.metaItem}>
-                            <Ionicons name="calendar-outline" size={14} color="#64748B" />
-                            <Text style={styles.metaText}>{item.ageYears || '—'} yrs</Text>
-                          </View>
-                          {item.vaccinated && (
-                            <View style={styles.vaccinatedBadge}>
-                              <Ionicons name="shield-checkmark" size={12} color="#10B981" />
-                              <Text style={styles.vaccinatedText}>Vaccinated</Text>
-                            </View>
-                          )}
-                        </View>
-                      </View>
-                    </Pressable>
-                    <View style={styles.cardActions}>
-                      <Pressable style={styles.actionButton} onPress={() => openEditModal(item)}>
-                        <Ionicons name="create-outline" size={20} color="#0a7ea4" />
-                      </Pressable>
-                      <Pressable 
-                        style={[styles.actionButton, styles.deleteButton]} 
-                        onPress={() => handleDelete(item)}
-                        disabled={deleting === item.id}
-                      >
-                        {deleting === item.id ? (
-                          <ActivityIndicator size="small" color="#EF4444" />
-                        ) : (
-                          <Ionicons name="trash-outline" size={20} color="#EF4444" />
-                        )}
-                      </Pressable>
-                    </View>
+                <View style={styles.profileInfo}>
+                  <View style={styles.profileHeader}>
+                    <Text style={styles.profileName}>{selectedCattle.name}</Text>
+                    <View style={[styles.healthDot, { backgroundColor: getHealthColor(selectedCattle.healthStatus) }]} />
                   </View>
-                ))}
+                  <Text style={styles.profileBreed}>{selectedCattle.breed || 'Unknown breed'}</Text>
+                  <View style={styles.profileMeta}>
+                    <View style={styles.metaItem}>
+                      <Ionicons name="scale-outline" size={14} color="#64748B" />
+                      <Text style={styles.metaText}>{selectedCattle.weightKg || '—'} kg</Text>
+                    </View>
+                    <View style={styles.metaItem}>
+                      <Ionicons name="calendar-outline" size={14} color="#64748B" />
+                      <Text style={styles.metaText}>{selectedCattle.ageYears || '—'} yrs</Text>
+                    </View>
+                    {selectedCattle.vaccinated && (
+                      <View style={styles.vaccinatedBadge}>
+                        <Ionicons name="shield-checkmark" size={12} color="#10B981" />
+                        <Text style={styles.vaccinatedText}>Vaccinated</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              </Pressable>
+              <View style={styles.cardActions}>
+                <Pressable style={styles.actionButton} onPress={() => openEditModal(selectedCattle)}>
+                  <Ionicons name="create-outline" size={20} color="#0a7ea4" />
+                </Pressable>
               </View>
-            )}
+            </View>
 
-            {/* Horses Section */}
-            {grouped.horse.length > 0 && (
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>🐴 Horses</Text>
-                  <Tag label={`${grouped.horse.length}`} tone="warning" />
-                </View>
-                {grouped.horse.map((item) => (
-                  <View key={item.id} style={styles.profileCard}>
-                    <Pressable style={styles.profileCardContent} onPress={() => setSelected(item)}>
-                      <View style={[styles.profileAvatar, { backgroundColor: '#FEF3C7' }]}>
-                        <Text style={styles.avatarEmoji}>{getCattleIcon(item.type)}</Text>
-                      </View>
-                      <View style={styles.profileInfo}>
-                        <View style={styles.profileHeader}>
-                          <Text style={styles.profileName}>{item.name}</Text>
-                          <View style={[styles.healthDot, { backgroundColor: getHealthColor(item.healthStatus) }]} />
-                        </View>
-                        <Text style={styles.profileBreed}>{item.breed || 'Unknown breed'}</Text>
-                        <View style={styles.profileMeta}>
-                          <View style={styles.metaItem}>
-                            <Ionicons name="scale-outline" size={14} color="#64748B" />
-                            <Text style={styles.metaText}>{item.weightKg || '—'} kg</Text>
-                          </View>
-                          <View style={styles.metaItem}>
-                            <Ionicons name="calendar-outline" size={14} color="#64748B" />
-                            <Text style={styles.metaText}>{item.ageYears || '—'} yrs</Text>
-                          </View>
-                          {item.vaccinated && (
-                            <View style={styles.vaccinatedBadge}>
-                              <Ionicons name="shield-checkmark" size={12} color="#10B981" />
-                              <Text style={styles.vaccinatedText}>Vaccinated</Text>
-                            </View>
-                          )}
-                        </View>
-                      </View>
-                    </Pressable>
-                    <View style={styles.cardActions}>
-                      <Pressable style={styles.actionButton} onPress={() => openEditModal(item)}>
-                        <Ionicons name="create-outline" size={20} color="#0a7ea4" />
-                      </Pressable>
-                      <Pressable 
-                        style={[styles.actionButton, styles.deleteButton]} 
-                        onPress={() => handleDelete(item)}
-                        disabled={deleting === item.id}
-                      >
-                        {deleting === item.id ? (
-                          <ActivityIndicator size="small" color="#EF4444" />
-                        ) : (
-                          <Ionicons name="trash-outline" size={20} color="#EF4444" />
-                        )}
-                      </Pressable>
-                    </View>
+            {/* Quick Actions */}
+            <View style={styles.quickActionsSection}>
+              <Text style={styles.sectionTitle}>Quick Actions</Text>
+              <View style={styles.quickActionsGrid}>
+                <Pressable 
+                  style={styles.quickActionCard}
+                  onPress={() => router.push('/(tabs)/calculator')}
+                >
+                  <View style={[styles.quickActionIcon, { backgroundColor: '#E0F2FE' }]}>
+                    <Ionicons name="calculator-outline" size={24} color="#0a7ea4" />
                   </View>
-                ))}
+                  <Text style={styles.quickActionText}>Calculate Nutrition</Text>
+                </Pressable>
+                <Pressable 
+                  style={styles.quickActionCard}
+                  onPress={() => router.push('/(tabs)/meals')}
+                >
+                  <View style={[styles.quickActionIcon, { backgroundColor: '#FEF3C7' }]}>
+                    <Ionicons name="restaurant-outline" size={24} color="#F59E0B" />
+                  </View>
+                  <Text style={styles.quickActionText}>Create Meal Plan</Text>
+                </Pressable>
+                <Pressable 
+                  style={styles.quickActionCard}
+                  onPress={() => router.push('/(tabs)/progress')}
+                >
+                  <View style={[styles.quickActionIcon, { backgroundColor: '#D1FAE5' }]}>
+                    <Ionicons name="bar-chart-outline" size={24} color="#10B981" />
+                  </View>
+                  <Text style={styles.quickActionText}>Log Progress</Text>
+                </Pressable>
+                <Pressable 
+                  style={styles.quickActionCard}
+                  onPress={() => router.push('/(tabs)/pregnancy')}
+                >
+                  <View style={[styles.quickActionIcon, { backgroundColor: '#FCE7F3' }]}>
+                    <Ionicons name="calendar-outline" size={24} color="#EC4899" />
+                  </View>
+                  <Text style={styles.quickActionText}>Pregnancy Plan</Text>
+                </Pressable>
               </View>
-            )}
+            </View>
+
+            {/* Profile Details Summary */}
+            <View style={styles.detailsSection}>
+              <Text style={styles.sectionTitle}>Profile Details</Text>
+              <View style={styles.detailsCard}>
+                {selectedCattle.tagId && (
+                  <View style={styles.detailRow}>
+                    <Ionicons name="pricetag-outline" size={18} color="#64748B" />
+                    <Text style={styles.detailLabel}>Tag ID:</Text>
+                    <Text style={styles.detailValue}>{selectedCattle.tagId}</Text>
+                  </View>
+                )}
+                {selectedCattle.country && (
+                  <View style={styles.detailRow}>
+                    <Ionicons name="location-outline" size={18} color="#64748B" />
+                    <Text style={styles.detailLabel}>Country:</Text>
+                    <Text style={styles.detailValue}>{selectedCattle.country}</Text>
+                  </View>
+                )}
+                {selectedCattle.dietGoal && (
+                  <View style={styles.detailRow}>
+                    <Ionicons name="nutrition-outline" size={18} color="#64748B" />
+                    <Text style={styles.detailLabel}>Diet Goal:</Text>
+                    <Text style={styles.detailValue}>{selectedCattle.dietGoal}</Text>
+                  </View>
+                )}
+                {selectedCattle.lastVetVisit && (
+                  <View style={styles.detailRow}>
+                    <Ionicons name="medkit-outline" size={18} color="#64748B" />
+                    <Text style={styles.detailLabel}>Last Vet Visit:</Text>
+                    <Text style={styles.detailValue}>{formatDisplayDate(selectedCattle.lastVetVisit)}</Text>
+                  </View>
+                )}
+              </View>
+            </View>
           </>
         )}
       </ScrollView>
@@ -973,6 +970,84 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
     overflow: 'hidden',
+  },
+  profileDetailCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    overflow: 'hidden',
+  },
+  quickActionsSection: {
+    marginBottom: 24,
+  },
+  quickActionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginTop: 12,
+  },
+  quickActionCard: {
+    flex: 1,
+    minWidth: '45%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  quickActionIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  quickActionText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#0F172A',
+    textAlign: 'center',
+  },
+  detailsSection: {
+    marginBottom: 24,
+  },
+  detailsCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  detailLabel: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  detailValue: {
+    fontSize: 14,
+    color: '#0F172A',
+    fontWeight: '600',
+    flex: 1,
   },
   profileCardContent: {
     flexDirection: 'row',

@@ -5,6 +5,7 @@ import { ActivityIndicator, Alert, Pressable, SafeAreaView, ScrollView, StyleShe
 import { FormField } from '@/components/ui/form-field';
 import { SectionCard } from '@/components/ui/section-card';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSelectedCattle } from '@/contexts/SelectedCattleContext';
 import { useUserCollection } from '@/hooks/use-user-collection';
 import { addUserDocument, deleteUserDocument } from '@/services/firestore';
 import { CattleProfile, NutritionCalculation } from '@/types/models';
@@ -21,12 +22,30 @@ const initialForm = {
 
 export default function CalculatorScreen() {
   const { user } = useAuth();
+  const { selectedCattle: contextSelectedCattle } = useSelectedCattle();
   const { data: herd } = useUserCollection<CattleProfile>('cattle');
   const { data: records, loading } = useUserCollection<NutritionCalculation>('calculations', { orderByField: 'createdAt' });
   const [form, setForm] = useState(initialForm);
   const [calculating, setCalculating] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState('');
+
+  // Filter records by selected cattle
+  const filteredRecords = useMemo(() => {
+    if (!contextSelectedCattle) return [];
+    return records.filter((r) => r.cattleId === contextSelectedCattle.id);
+  }, [records, contextSelectedCattle]);
+
+  // Auto-select cattle from context
+  React.useEffect(() => {
+    if (contextSelectedCattle && !form.cattleId) {
+      setForm((prev) => ({
+        ...prev,
+        cattleId: contextSelectedCattle.id,
+        weightKg: `${contextSelectedCattle.weightKg || ''}`,
+      }));
+    }
+  }, [contextSelectedCattle]);
 
   const selectedCattle = useMemo(() => herd.find((item) => item.id === form.cattleId), [form.cattleId, herd]);
 
@@ -229,10 +248,12 @@ export default function CalculatorScreen() {
         <SectionCard title="History">
           {loading ? (
             <ActivityIndicator />
-          ) : records.length === 0 ? (
+          ) : !contextSelectedCattle ? (
+            <Text style={styles.helper}>Please select a cattle profile to view calculations.</Text>
+          ) : filteredRecords.length === 0 ? (
             <Text style={styles.helper}>No calculations stored yet.</Text>
           ) : (
-            records.map((entry) => (
+            filteredRecords.map((entry) => (
               <View key={entry.id} style={styles.historyCard}>
                 <View style={styles.historyHeader}>
                   <View style={{ flex: 1 }}>

@@ -5,6 +5,7 @@ import { ActivityIndicator, Alert, Modal, Pressable, SafeAreaView, ScrollView, S
 import { SectionCard } from '@/components/ui/section-card';
 import { Tag } from '@/components/ui/tag';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSelectedCattle } from '@/contexts/SelectedCattleContext';
 import { useUserCollection } from '@/hooks/use-user-collection';
 import { addUserDocument, deleteUserDocument, updateUserDocument } from '@/services/firestore';
 import { CattleProfile, PregnancyPlan } from '@/types/models';
@@ -26,9 +27,23 @@ const initialTodoForm = {
 
 export default function PregnancyScreen() {
   const { user } = useAuth();
+  const { selectedCattle: contextSelectedCattle } = useSelectedCattle();
   const { data: herd } = useUserCollection<CattleProfile>('cattle');
   const { data: plans, loading } = useUserCollection<PregnancyPlan>('pregnancy', { orderByField: 'createdAt' });
   const [form, setForm] = useState(initialForm);
+
+  // Filter plans by selected cattle
+  const filteredPlans = useMemo(() => {
+    if (!contextSelectedCattle) return [];
+    return plans.filter((p) => p.cattleId === contextSelectedCattle.id);
+  }, [plans, contextSelectedCattle]);
+
+  // Auto-select cattle from context
+  React.useEffect(() => {
+    if (contextSelectedCattle && !form.cattleId) {
+      setForm((prev) => ({ ...prev, cattleId: contextSelectedCattle.id }));
+    }
+  }, [contextSelectedCattle]);
   const [todoForm, setTodoForm] = useState(initialTodoForm);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);

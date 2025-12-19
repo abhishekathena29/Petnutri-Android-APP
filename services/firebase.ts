@@ -1,7 +1,6 @@
 import { getApp, getApps, initializeApp } from 'firebase/app';
-import { getAuth, getReactNativePersistence, initializeAuth } from 'firebase/auth';
+import { getAuth } from 'firebase/auth';
 import { getFirestore, initializeFirestore, persistentLocalCache } from 'firebase/firestore';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY ?? '',
@@ -16,11 +15,9 @@ const apps = getApps();
 const app = apps.length === 0 ? initializeApp(firebaseConfig) : getApp();
 const shouldInitNativeInstances = apps.length === 0;
 
-const auth = shouldInitNativeInstances
-  ? initializeAuth(app, {
-      persistence: getReactNativePersistence(AsyncStorage),
-    })
-  : getAuth(app);
+// For Expo, getAuth works fine - Firebase v9+ handles React Native persistence automatically
+// No need for getReactNativePersistence in Expo environment
+const auth = getAuth(app);
 
 const db = shouldInitNativeInstances
   ? initializeFirestore(app, {

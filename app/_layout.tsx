@@ -6,26 +6,35 @@ import { ActivityIndicator, View } from 'react-native';
 import 'react-native-reanimated';
 
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { SelectedCattleProvider, useSelectedCattle } from '@/contexts/SelectedCattleContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useEffect } from 'react';
 
 function useProtectedRoute(user: unknown, initializing: boolean, isSigningUp: boolean) {
   const segments = useSegments();
   const router = useRouter();
+  const { selectedCattle } = useSelectedCattle();
 
   useEffect(() => {
     if (initializing) return;
 
     const inAuthGroup = segments[0] === 'auth';
+    const inSelectProfile = segments[0] === 'select-profile';
+    const inTabs = segments[0] === '(tabs)';
 
     if (!user && !inAuthGroup) {
       // Redirect to auth if not logged in
       router.replace('/auth');
     } else if (user && inAuthGroup && !isSigningUp) {
-      // Redirect to home if logged in (but not during signup)
-      router.replace('/(tabs)');
+      // After login, always go to select-profile first
+      router.replace('/select-profile');
+    } else if (user && inTabs && !selectedCattle) {
+      // If in tabs but no profile selected, redirect to profile selection
+      router.replace('/select-profile');
     }
-  }, [user, segments, initializing, isSigningUp, router]);
+    // Note: We don't auto-redirect from select-profile even if selectedCattle exists
+    // User must explicitly select a profile via handleSelectCattle to proceed
+  }, [user, segments, initializing, isSigningUp, selectedCattle, router]);
 }
 
 function RootLayoutNav() {
@@ -49,10 +58,12 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <RootLayoutNav />
-        <StatusBar style="auto" />
-      </ThemeProvider>
+      <SelectedCattleProvider>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <RootLayoutNav />
+          <StatusBar style="auto" />
+        </ThemeProvider>
+      </SelectedCattleProvider>
     </AuthProvider>
   );
 }

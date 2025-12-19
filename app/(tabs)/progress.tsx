@@ -6,6 +6,7 @@ import { FormField } from '@/components/ui/form-field';
 import { SectionCard } from '@/components/ui/section-card';
 import { Tag } from '@/components/ui/tag';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSelectedCattle } from '@/contexts/SelectedCattleContext';
 import { useUserCollection } from '@/hooks/use-user-collection';
 import { addUserDocument, deleteUserDocument } from '@/services/firestore';
 import { CattleProfile, ProgressLog } from '@/types/models';
@@ -32,9 +33,23 @@ const getWeekNumber = (date: Date) => {
 
 export default function ProgressScreen() {
   const { user } = useAuth();
+  const { selectedCattle: contextSelectedCattle } = useSelectedCattle();
   const { data: herd } = useUserCollection<CattleProfile>('cattle');
   const { data: logs, loading } = useUserCollection<ProgressLog>('progress', { orderByField: 'createdAt' });
   const [form, setForm] = useState(initialForm);
+
+  // Filter logs by selected cattle
+  const filteredLogs = useMemo(() => {
+    if (!contextSelectedCattle) return [];
+    return logs.filter((l) => l.cattleId === contextSelectedCattle.id);
+  }, [logs, contextSelectedCattle]);
+
+  // Auto-select cattle from context
+  React.useEffect(() => {
+    if (contextSelectedCattle && !form.cattleId) {
+      setForm((prev) => ({ ...prev, cattleId: contextSelectedCattle.id }));
+    }
+  }, [contextSelectedCattle]);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -62,8 +77,8 @@ export default function ProgressScreen() {
     }
   }, [selectedYear, selectedMonth, selectedDay]);
 
-  // Filter daily logs only
-  const dailyLogs = useMemo(() => logs.filter((log) => log.periodType === 'daily'), [logs]);
+  // Filter daily logs only from filtered logs
+  const dailyLogs = useMemo(() => filteredLogs.filter((log) => log.periodType === 'daily'), [filteredLogs]);
 
   // Calculate weekly and monthly stats from daily logs grouped by cattle and type
   const stats = useMemo(() => {

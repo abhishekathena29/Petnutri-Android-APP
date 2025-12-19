@@ -1,19 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Modal,
-  Pressable,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    Alert,
+    Modal,
+    Pressable,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from 'react-native';
 
 import { Tag } from '@/components/ui/tag';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSelectedCattle } from '@/contexts/SelectedCattleContext';
 import { useUserCollection } from '@/hooks/use-user-collection';
 import { addUserDocument, deleteUserDocument } from '@/services/firestore';
 import { CattleProfile, MealPlan } from '@/types/models';
@@ -343,9 +344,16 @@ const getDietIcon = (dietType: string): keyof typeof Ionicons.glyphMap => {
 
 export default function MealsScreen() {
   const { user } = useAuth();
+  const { selectedCattle: contextSelectedCattle } = useSelectedCattle();
   const { data: herd } = useUserCollection<CattleProfile>('cattle');
   const { data: savedPlans, loading: loadingPlans } = useUserCollection<MealPlan>('meals', { orderByField: 'createdAt' });
   
+  // Filter plans by selected cattle
+  const filteredPlans = useMemo(() => {
+    if (!contextSelectedCattle) return [];
+    return savedPlans.filter((p) => p.cattleId === contextSelectedCattle.id);
+  }, [savedPlans, contextSelectedCattle]);
+
   const [activeTab, setActiveTab] = useState<'mealPlan' | 'recipes'>('mealPlan');
   const [showPlannerModal, setShowPlannerModal] = useState(false);
   const [showRecipeModal, setShowRecipeModal] = useState(false);
@@ -679,69 +687,74 @@ export default function MealsScreen() {
         {/* RECIPES TAB */}
         {activeTab === 'recipes' && (
           <>
-            {/* Cow Recipes */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <View style={styles.sectionTitleRow}>
-                  <Ionicons name="logo-octocat" size={22} color="#0a7ea4" />
-                  <Text style={styles.sectionTitle}>Cow Recipes</Text>
-                </View>
-                <Tag label={`${cowRecipes.length}`} tone="primary" />
+            {/* Recipes filtered by selected cattle type */}
+            {!contextSelectedCattle ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyText}>Please select a cattle profile to view recipes</Text>
               </View>
-              <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={false} 
-                style={styles.recipeScroll}
-                contentContainerStyle={styles.recipeScrollContent}
-              >
-                {cowRecipes.map((recipe) => (
-                  <Pressable key={recipe.id} style={styles.recipeCard} onPress={() => openRecipe(recipe)}>
-                    <View style={styles.recipeIconWrap}>
-                      <Ionicons name={recipe.icon} size={28} color="#0a7ea4" />
-                    </View>
-                    <Text style={styles.recipeName} numberOfLines={2}>{recipe.name}</Text>
-                    <Text style={styles.recipeCalories}>{recipe.calories} kcal</Text>
-                    <View style={[styles.recipeDietBadge, { backgroundColor: `${getDietColor(recipe.dietType)}15` }]}>
-                      <Text style={[styles.recipeDietText, { color: getDietColor(recipe.dietType) }]}>
-                        {recipe.dietType}
-                      </Text>
-                    </View>
-                  </Pressable>
-                ))}
-              </ScrollView>
-            </View>
-
-            {/* Horse Recipes */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <View style={styles.sectionTitleRow}>
-                  <Ionicons name="git-branch-outline" size={22} color="#D97706" />
-                  <Text style={styles.sectionTitle}>Horse Recipes</Text>
+            ) : contextSelectedCattle.type === 'cow' ? (
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <View style={styles.sectionTitleRow}>
+                    <Ionicons name="logo-octocat" size={22} color="#0a7ea4" />
+                    <Text style={styles.sectionTitle}>Cow Recipes</Text>
+                  </View>
+                  <Tag label={`${cowRecipes.length}`} tone="primary" />
                 </View>
-                <Tag label={`${horseRecipes.length}`} tone="warning" />
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false} 
+                  style={styles.recipeScroll}
+                  contentContainerStyle={styles.recipeScrollContent}
+                >
+                  {cowRecipes.map((recipe) => (
+                    <Pressable key={recipe.id} style={styles.recipeCard} onPress={() => openRecipe(recipe)}>
+                      <View style={styles.recipeIconWrap}>
+                        <Ionicons name={recipe.icon} size={28} color="#0a7ea4" />
+                      </View>
+                      <Text style={styles.recipeName} numberOfLines={2}>{recipe.name}</Text>
+                      <Text style={styles.recipeCalories}>{recipe.calories} kcal</Text>
+                      <View style={[styles.recipeDietBadge, { backgroundColor: `${getDietColor(recipe.dietType)}15` }]}>
+                        <Text style={[styles.recipeDietText, { color: getDietColor(recipe.dietType) }]}>
+                          {recipe.dietType}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  ))}
+                </ScrollView>
               </View>
-              <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={false} 
-                style={styles.recipeScroll}
-                contentContainerStyle={styles.recipeScrollContent}
-              >
-                {horseRecipes.map((recipe) => (
-                  <Pressable key={recipe.id} style={[styles.recipeCard, styles.horseRecipeCard]} onPress={() => openRecipe(recipe)}>
-                    <View style={[styles.recipeIconWrap, styles.horseIconWrap]}>
-                      <Ionicons name={recipe.icon} size={28} color="#D97706" />
-                    </View>
-                    <Text style={styles.recipeName} numberOfLines={2}>{recipe.name}</Text>
-                    <Text style={styles.recipeCalories}>{recipe.calories} kcal</Text>
-                    <View style={[styles.recipeDietBadge, { backgroundColor: `${getDietColor(recipe.dietType)}15` }]}>
-                      <Text style={[styles.recipeDietText, { color: getDietColor(recipe.dietType) }]}>
-                        {recipe.dietType}
-                      </Text>
-                    </View>
-                  </Pressable>
-                ))}
-              </ScrollView>
-            </View>
+            ) : (
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <View style={styles.sectionTitleRow}>
+                    <Ionicons name="git-branch-outline" size={22} color="#D97706" />
+                    <Text style={styles.sectionTitle}>Horse Recipes</Text>
+                  </View>
+                  <Tag label={`${horseRecipes.length}`} tone="warning" />
+                </View>
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false} 
+                  style={styles.recipeScroll}
+                  contentContainerStyle={styles.recipeScrollContent}
+                >
+                  {horseRecipes.map((recipe) => (
+                    <Pressable key={recipe.id} style={[styles.recipeCard, styles.horseRecipeCard]} onPress={() => openRecipe(recipe)}>
+                      <View style={[styles.recipeIconWrap, styles.horseIconWrap]}>
+                        <Ionicons name={recipe.icon} size={28} color="#D97706" />
+                      </View>
+                      <Text style={styles.recipeName} numberOfLines={2}>{recipe.name}</Text>
+                      <Text style={styles.recipeCalories}>{recipe.calories} kcal</Text>
+                      <View style={[styles.recipeDietBadge, { backgroundColor: `${getDietColor(recipe.dietType)}15` }]}>
+                        <Text style={[styles.recipeDietText, { color: getDietColor(recipe.dietType) }]}>
+                          {recipe.dietType}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
           </>
         )}
       </ScrollView>
