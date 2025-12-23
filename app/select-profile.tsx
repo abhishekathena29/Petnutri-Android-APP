@@ -9,7 +9,6 @@ import {
     Modal,
     Platform,
     Pressable,
-    SafeAreaView,
     ScrollView,
     StyleSheet,
     Switch,
@@ -17,12 +16,32 @@ import {
     TouchableWithoutFeedback,
     View
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FormField } from '@/components/ui/form-field';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSelectedCattle } from '@/contexts/SelectedCattleContext';
 import { addUserDocument } from '@/services/firestore';
 import { CattleCategory, CattleProfile } from '@/types/models';
+
+// Helper function to convert hex color to rgba
+const hexToRgba = (hex: string, opacity: number): string => {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+};
+
+// Helper function to create boxShadow from shadow props
+const createBoxShadow = (
+  shadowColor: string,
+  shadowOffset: { width: number; height: number },
+  shadowOpacity: number,
+  shadowRadius: number
+): string => {
+  const color = hexToRgba(shadowColor, shadowOpacity);
+  return `${shadowOffset.width}px ${shadowOffset.height}px ${shadowRadius}px 0px ${color}`;
+};
 
 const defaultForm = {
   name: '',
@@ -41,6 +60,7 @@ const defaultForm = {
 };
 
 export default function SelectProfileScreen() {
+  const insets = useSafeAreaInsets();
   const { user, logout } = useAuth();
   const { cattle, loading, setSelectedCattle, selectedCattle } = useSelectedCattle();
   const router = useRouter();
@@ -78,7 +98,16 @@ export default function SelectProfileScreen() {
 
   // Clear selected cattle when entering this page to force user to explicitly select
   useEffect(() => {
-    setSelectedCattle(null);
+    // Call async function without await - we don't need to wait for storage update
+    // Wrap in try-catch to prevent errors from breaking the component
+    try {
+      setSelectedCattle(null).catch((err) => {
+        console.error('Error clearing selected cattle:', err);
+      });
+    } catch (err) {
+      console.error('Error in setSelectedCattle:', err);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run once on mount
 
   const handleBackToLogin = async () => {
@@ -205,6 +234,43 @@ export default function SelectProfileScreen() {
     return expectedDate.toISOString().split('T')[0];
   };
 
+  const calculateExpectedMonths = (pregnancyDateStr: string) => {
+    if (!pregnancyDateStr) return null;
+    
+    const pregnancyDate = new Date(pregnancyDateStr);
+    const day = pregnancyDate.getDate();
+    
+    // Calculate expected delivery date (pregnancy date + 9 months)
+    const expectedDate = new Date(pregnancyDate);
+    expectedDate.setMonth(expectedDate.getMonth() + 9);
+    
+    const expectedMonth = expectedDate.getMonth(); // 0-11
+    const expectedYear = expectedDate.getFullYear();
+    
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    
+    if (day >= 1 && day <= 15) {
+      // Suggest two months: current month and next month
+      const firstMonth = monthNames[expectedMonth];
+      const secondMonthIndex = (expectedMonth + 1) % 12;
+      const secondMonth = monthNames[secondMonthIndex];
+      const secondYear = secondMonthIndex === 0 ? expectedYear + 1 : expectedYear;
+      
+      return {
+        months: [firstMonth, secondMonth],
+        years: [expectedYear, secondYear],
+        display: `${firstMonth} ${expectedYear} to ${secondMonth} ${secondYear}`
+      };
+    } else {
+      // Suggest Dec to Jan (next year)
+      return {
+        months: ['Dec', 'Jan'],
+        years: [expectedYear, expectedYear + 1],
+        display: `Dec ${expectedYear} to Jan ${expectedYear + 1}`
+      };
+    }
+  };
+
   const handlePregnancyDateConfirm = () => {
     const formattedDate = `${pregnancyDateYear}-${String(pregnancyDateMonth + 1).padStart(2, '0')}-${String(pregnancyDateDay).padStart(2, '0')}`;
     const blockedMonths = calculateBlockedMonths(formattedDate, pregnancyForm.trimester);
@@ -326,7 +392,7 @@ export default function SelectProfileScreen() {
 
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       {/* Header with Back Button */}
       <View style={styles.topHeader}>
         <Pressable style={styles.backButton} onPress={handleBackToLogin}>
@@ -335,7 +401,10 @@ export default function SelectProfileScreen() {
         <Text style={styles.topHeaderTitle}>Select Profile</Text>
         <View style={{ width: 40 }} />
       </View>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        contentContainerStyle={styles.content} 
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.header}>
           <Text style={styles.title}>Select Cattle Profile</Text>
           <Text style={styles.subtitle}>Choose a profile to continue or create a new one</Text>
@@ -392,7 +461,7 @@ export default function SelectProfileScreen() {
                     <View style={styles.profileMeta}>
                       <View style={styles.metaItem}>
                         <Ionicons name="scale-outline" size={14} color="#64748B" />
-                        <Text style={styles.metaText}>{item.weightKg || '—'} kg</Text>
+                        <Text style={styles.metaText}>{item.weightValue || '—'} {item.weightUnit || 'kg'}</Text>
                       </View>
                       <View style={styles.metaItem}>
                         <Ionicons name="calendar-outline" size={14} color="#64748B" />
@@ -419,7 +488,7 @@ export default function SelectProfileScreen() {
       <Modal visible={showCreateModal} animationType="slide" onRequestClose={() => setShowCreateModal(false)}>
         <SafeAreaView style={styles.modalSafe}>
           <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.select({ ios: 'padding', default: undefined })}>
-            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+            {Platform.OS === 'web' ? (
               <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                 <View style={styles.modalHeader}>
                   <Pressable style={styles.closeButton} onPress={() => { 
@@ -540,10 +609,19 @@ export default function SelectProfileScreen() {
                       {(['pregnant', 'notPregnant', 'lactating'] as const).map((status) => (
                         <Pressable
                           key={status}
-                          style={[styles.toggleChip, form.femaleStatus === status && styles.toggleChipActive]}
+                          style={[
+                            styles.toggleChip, 
+                            styles.toggleChipResponsive,
+                            form.femaleStatus === status && styles.toggleChipActive
+                          ]}
                           onPress={() => handleChange('femaleStatus', status)}
                         >
-                          <Text style={[styles.toggleText, form.femaleStatus === status && styles.toggleTextActive]}>
+                          <Text 
+                            style={[styles.toggleText, form.femaleStatus === status && styles.toggleTextActive]}
+                            numberOfLines={1}
+                            adjustsFontSizeToFit
+                            minimumFontScale={0.85}
+                          >
                             {status === 'pregnant' ? '🤰 Pregnant' : status === 'lactating' ? '🥛 Lactating' : 'Not Pregnant'}
                           </Text>
                         </Pressable>
@@ -558,10 +636,19 @@ export default function SelectProfileScreen() {
                     {(['maintenance', 'lightWork', 'moderateWork', 'heavyWork'] as const).map((level) => (
                       <Pressable
                         key={level}
-                        style={[styles.toggleChip, form.activityLevel === level && styles.toggleChipActive]}
+                        style={[
+                          styles.toggleChip, 
+                          styles.toggleChipResponsive,
+                          form.activityLevel === level && styles.toggleChipActive
+                        ]}
                         onPress={() => handleChange('activityLevel', level)}
                       >
-                        <Text style={[styles.toggleText, form.activityLevel === level && styles.toggleTextActive]}>
+                        <Text 
+                          style={[styles.toggleText, form.activityLevel === level && styles.toggleTextActive]}
+                          numberOfLines={1}
+                          adjustsFontSizeToFit
+                          minimumFontScale={0.85}
+                        >
                           {level === 'maintenance' ? 'Maintenance' : level === 'lightWork' ? 'Light Work' : level === 'moderateWork' ? 'Moderate Work' : 'Heavy Work'}
                         </Text>
                       </Pressable>
@@ -613,7 +700,203 @@ export default function SelectProfileScreen() {
                   )}
                 </Pressable>
               </ScrollView>
-            </TouchableWithoutFeedback>
+            ) : (
+              <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+                <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                  <View style={styles.modalHeader}>
+                    <Pressable style={styles.closeButton} onPress={() => { 
+                      setShowCreateModal(false); 
+                      resetForm();
+                    }}>
+                      <Ionicons name="close" size={24} color="#64748B" />
+                    </Pressable>
+                    <Text style={styles.modalTitle}>Create Cattle Profile</Text>
+                    <View style={{ width: 40 }} />
+                  </View>
+
+                  <View style={styles.toggleRow}>
+                    {(['cow', 'horse'] as CattleCategory[]).map((type) => (
+                      <Pressable
+                        key={type}
+                        style={[styles.toggleChip, form.type === type && styles.toggleChipActive]}
+                        onPress={() => handleChange('type', type)}
+                      >
+                        <Text style={styles.toggleEmoji}>{type === 'cow' ? '🐄' : '🐴'}</Text>
+                        <Text style={[styles.toggleText, form.type === type && styles.toggleTextActive]}>
+                          {type === 'cow' ? 'Cow' : 'Horse'}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+
+                  <View style={styles.formSection}>
+                    <Text style={styles.formSectionTitle}>Basic Information</Text>
+                    <FormField label="Name" placeholder="Luna, Bolt..." value={form.name} onChangeText={(text) => handleChange('name', text)} />
+                    <FormField label="Breed" placeholder="Holstein Friesian" value={form.breed} onChangeText={(text) => handleChange('breed', text)} />
+                    <FormField
+                      label="Age (years)"
+                      placeholder="3"
+                      keyboardType="numeric"
+                      value={form.ageYears}
+                      onChangeText={(text) => handleChange('ageYears', text)}
+                    />
+                  </View>
+
+                  <View style={styles.formSection}>
+                    <Text style={styles.formSectionTitle}>Sex</Text>
+                    <View style={styles.toggleRow}>
+                      {(['male', 'female'] as const).map((sex) => (
+                        <Pressable
+                          key={sex}
+                          style={[styles.toggleChip, form.sex === sex && styles.toggleChipActive]}
+                          onPress={() => handleChange('sex', sex)}
+                        >
+                          <Text style={[styles.toggleText, form.sex === sex && styles.toggleTextActive]}>
+                            {sex === 'male' ? '♂ Male' : '♀ Female'}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
+
+                  <View style={styles.formSection}>
+                    <Text style={styles.formSectionTitle}>Physical Details</Text>
+                    <View style={styles.row}>
+                      <FormField
+                        label={`Body Weight (${form.weightUnit})`}
+                        placeholder={form.weightUnit === 'kg' ? '550' : '1212'}
+                        keyboardType="numeric"
+                        style={{ flex: 1 }}
+                        value={form.weightValue}
+                        onChangeText={(text) => handleChange('weightValue', text)}
+                      />
+                      <View style={{ width: 12 }} />
+                      <View style={{ flex: 1, justifyContent: 'flex-end', paddingBottom: 12 }}>
+                        <View style={styles.toggleRow}>
+                          {(['kg', 'lbs'] as const).map((unit) => (
+                            <Pressable
+                              key={unit}
+                              style={[styles.toggleChipSmall, form.weightUnit === unit && styles.toggleChipActive]}
+                              onPress={() => handleChange('weightUnit', unit)}
+                            >
+                              <Text style={[styles.toggleTextSmall, form.weightUnit === unit && styles.toggleTextActive]}>
+                                {unit.toUpperCase()}
+                              </Text>
+                            </Pressable>
+                          ))}
+                        </View>
+                      </View>
+                    </View>
+                    <View style={styles.row}>
+                      <FormField
+                        label={`Height (${form.heightUnit === 'hands' ? 'hands' : 'cm'})`}
+                        placeholder={form.heightUnit === 'hands' ? '15.2' : '160'}
+                        keyboardType="numeric"
+                        style={{ flex: 1 }}
+                        value={form.heightValue}
+                        onChangeText={(text) => handleChange('heightValue', text)}
+                      />
+                      <View style={{ width: 12 }} />
+                      <View style={{ flex: 1, justifyContent: 'flex-end', paddingBottom: 12 }}>
+                        <View style={styles.toggleRow}>
+                          {(['hands', 'cm'] as const).map((unit) => (
+                            <Pressable
+                              key={unit}
+                              style={[styles.toggleChipSmall, form.heightUnit === unit && styles.toggleChipActive]}
+                              onPress={() => handleChange('heightUnit', unit)}
+                            >
+                              <Text style={[styles.toggleTextSmall, form.heightUnit === unit && styles.toggleTextActive]}>
+                                {unit.toUpperCase()}
+                              </Text>
+                            </Pressable>
+                          ))}
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+
+                  {form.sex === 'female' && (
+                    <View style={styles.formSection}>
+                      <Text style={styles.formSectionTitle}>Female Status</Text>
+                      <View style={styles.toggleRow}>
+                        {(['pregnant', 'notPregnant', 'lactating'] as const).map((status) => (
+                          <Pressable
+                            key={status}
+                            style={[styles.toggleChip, form.femaleStatus === status && styles.toggleChipActive]}
+                            onPress={() => handleChange('femaleStatus', status)}
+                          >
+                            <Text style={[styles.toggleText, form.femaleStatus === status && styles.toggleTextActive]}>
+                              {status === 'pregnant' ? '🤰 Pregnant' : status === 'lactating' ? '🥛 Lactating' : 'Not Pregnant'}
+                            </Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+
+                  <View style={styles.formSection}>
+                    <Text style={styles.formSectionTitle}>Activity Level</Text>
+                    <View style={styles.toggleRow}>
+                      {(['maintenance', 'lightWork', 'moderateWork', 'heavyWork'] as const).map((level) => (
+                        <Pressable
+                          key={level}
+                          style={[styles.toggleChip, form.activityLevel === level && styles.toggleChipActive]}
+                          onPress={() => handleChange('activityLevel', level)}
+                        >
+                          <Text style={[styles.toggleText, form.activityLevel === level && styles.toggleTextActive]}>
+                            {level === 'maintenance' ? 'Maintenance' : level === 'lightWork' ? 'Light Work' : level === 'moderateWork' ? 'Moderate Work' : 'Heavy Work'}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
+
+                  <View style={styles.formSection}>
+                    <Text style={styles.formSectionTitle}>Climate / Region</Text>
+                    <Pressable style={styles.dropdownButton} onPress={() => setShowClimatePicker(true)}>
+                      <Text style={[styles.dropdownText, !form.climateRegion && styles.dropdownPlaceholder]}>
+                        {form.climateRegion || 'Select climate region'}
+                      </Text>
+                      <Ionicons name="chevron-down" size={20} color="#64748B" />
+                    </Pressable>
+                    <Text style={styles.helperText}>Heat affects water & electrolytes requirements</Text>
+                  </View>
+
+                  <View style={styles.formSection}>
+                    <Text style={styles.formSectionTitle}>Care</Text>
+                    <View style={styles.switchRow}>
+                      <View style={styles.switchInfo}>
+                        <Ionicons name="shield-checkmark" size={20} color="#10B981" />
+                        <Text style={styles.switchLabel}>Vaccinated</Text>
+                      </View>
+                      <Switch
+                        value={form.vaccinated}
+                        onValueChange={(value) => handleChange('vaccinated', value)}
+                        trackColor={{ false: '#E2E8F0', true: '#A7F3D0' }}
+                        thumbColor={form.vaccinated ? '#10B981' : '#94A3B8'}
+                      />
+                    </View>
+                  </View>
+
+                  {error ? <Text style={styles.error}>{error}</Text> : null}
+
+                  <Pressable
+                    style={[styles.primaryButton, creating && { opacity: 0.6 }]}
+                    disabled={creating}
+                    onPress={handleCreate}
+                  >
+                    {creating ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <>
+                        <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                        <Text style={styles.primaryText}>Create Profile</Text>
+                      </>
+                    )}
+                  </Pressable>
+                </ScrollView>
+              </TouchableWithoutFeedback>
+            )}
           </KeyboardAvoidingView>
         </SafeAreaView>
       </Modal>
@@ -655,7 +938,7 @@ export default function SelectProfileScreen() {
       <Modal visible={showPregnancyModal} animationType="slide" onRequestClose={() => setShowPregnancyModal(false)}>
         <SafeAreaView style={styles.modalSafe}>
           <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.select({ ios: 'padding', default: undefined })}>
-            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+            {Platform.OS === 'web' ? (
               <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                 <View style={styles.modalHeader}>
                   <Pressable style={styles.closeButton} onPress={() => setShowPregnancyModal(false)}>
@@ -696,36 +979,86 @@ export default function SelectProfileScreen() {
                     </Text>
                     <Ionicons name="calendar-outline" size={20} color="#64748B" />
                   </Pressable>
-                  {pregnancyForm.dueDate && (
-                    <Text style={styles.helperText}>
-                      Expected Delivery: {formatDisplayDate(pregnancyForm.dueDate)}
-                    </Text>
-                  )}
                 </View>
 
-                <View style={styles.formSection}>
-                  <Text style={styles.formSectionTitle}>Months to Block (Auto-calculated)</Text>
-                  <Text style={styles.helperText}>
-                    Based on {pregnancyForm.trimester} trimester: {pregnancyForm.trimester === 'early' ? 'Months 0-3' : pregnancyForm.trimester === 'mid' ? 'Months 3-6' : 'Months 6-9'}
-                  </Text>
-                  <View style={styles.monthsContainer}>
-                    {pregnancyMonths.map((month) => {
-                      const isBlocked = pregnancyForm.blockedMonths.includes(month);
-                      return (
-                        <Pressable
-                          key={month}
-                          style={[styles.monthChip, isBlocked && styles.monthChipActive]}
-                          disabled={true}
-                        >
-                          <Text style={[styles.monthChipText, isBlocked && styles.monthChipTextActive]}>{month}</Text>
-                        </Pressable>
-                      );
-                    })}
+                {pregnancyForm.pregnancyDate && (
+                  <View style={styles.formSection}>
+                    <View style={styles.expectedMonthCard}>
+                      <View style={styles.expectedMonthHeader}>
+                        <Ionicons name="calendar" size={20} color="#0a7ea4" />
+                        <Text style={styles.expectedMonthTitle}>Expected Delivery Month</Text>
+                      </View>
+                      {(() => {
+                        const expectedMonths = calculateExpectedMonths(pregnancyForm.pregnancyDate);
+                        return expectedMonths ? (
+                          <Text style={styles.expectedMonthValue}>{expectedMonths.display}</Text>
+                        ) : null;
+                      })()}
+                      <Text style={styles.disclaimerText}>
+                        ⚠️ Note: This is an estimate and not a guarantee. Actual delivery may vary.
+                      </Text>
+                    </View>
                   </View>
-                  {pregnancyForm.blockedMonths.length > 0 && (
-                    <Text style={styles.selectedMonthsText}>
-                      Blocked Months: {formatBlockedMonths(pregnancyForm.blockedMonths.join(','))}
-                    </Text>
+                )}
+
+                <View style={styles.formSection}>
+                  <View style={styles.blockedMonthsHeader}>
+                    <View>
+                      <Text style={styles.formSectionTitle}>Blocked Months</Text>
+                      <Text style={styles.helperText}>
+                        {pregnancyForm.trimester === 'early' ? 'Months 0-3' : pregnancyForm.trimester === 'mid' ? 'Months 3-6' : 'Months 6-9'} from pregnancy date
+                      </Text>
+                    </View>
+                    {pregnancyForm.blockedMonths.length > 0 && (
+                      <View style={styles.blockedCountBadge}>
+                        <Text style={styles.blockedCountText}>{pregnancyForm.blockedMonths.length}</Text>
+                      </View>
+                    )}
+                  </View>
+                  
+                  {pregnancyForm.pregnancyDate ? (
+                    <>
+                      <View style={styles.monthsGrid}>
+                        {pregnancyMonths.map((month) => {
+                          const isBlocked = pregnancyForm.blockedMonths.includes(month);
+                          return (
+                            <View
+                              key={month}
+                              style={[
+                                styles.monthChipNew,
+                                isBlocked ? styles.monthChipBlocked : styles.monthChipAvailable
+                              ]}
+                            >
+                              {isBlocked && (
+                                <Ionicons name="lock-closed" size={14} color="#92400E" style={{ marginRight: 4 }} />
+                              )}
+                              <Text style={[
+                                styles.monthChipTextNew,
+                                isBlocked ? styles.monthChipTextBlocked : styles.monthChipTextAvailable
+                              ]}>
+                                {month}
+                              </Text>
+                            </View>
+                          );
+                        })}
+                      </View>
+                      {pregnancyForm.blockedMonths.length > 0 && (
+                        <View style={styles.blockedMonthsSummary}>
+                          <Ionicons name="information-circle" size={18} color="#D97706" />
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.blockedMonthsLabel}>Blocked Period</Text>
+                            <Text style={styles.blockedMonthsText}>
+                              {formatBlockedMonths(pregnancyForm.blockedMonths.join(','))}
+                            </Text>
+                          </View>
+                        </View>
+                      )}
+                    </>
+                  ) : (
+                    <View style={styles.emptyStateBox}>
+                      <Ionicons name="calendar-outline" size={32} color="#CBD5E1" />
+                      <Text style={styles.emptyStateText}>Select pregnancy date to calculate blocked months</Text>
+                    </View>
                   )}
                 </View>
 
@@ -733,7 +1066,137 @@ export default function SelectProfileScreen() {
                   <Text style={styles.secondaryButtonText}>Done</Text>
                 </Pressable>
               </ScrollView>
-            </TouchableWithoutFeedback>
+            ) : (
+              <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+                <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                  <View style={styles.modalHeader}>
+                    <Pressable style={styles.closeButton} onPress={() => setShowPregnancyModal(false)}>
+                      <Ionicons name="close" size={24} color="#64748B" />
+                    </Pressable>
+                    <Text style={styles.modalTitle}>Pregnancy Plan</Text>
+                    <View style={{ width: 40 }} />
+                  </View>
+                  
+                  {!pregnancyForm.pregnancyDate && (
+                    <Text style={[styles.helperText, { marginBottom: 16, paddingHorizontal: 4 }]}>
+                      Please select the pregnancy date first. Months will be automatically blocked based on the trimester.
+                    </Text>
+                  )}
+
+                  <View style={styles.formSection}>
+                    <Text style={styles.formSectionTitle}>Trimester</Text>
+                    <View style={styles.toggleRow}>
+                      {(['early', 'mid', 'late'] as const).map((trimester) => (
+                        <Pressable
+                          key={trimester}
+                          style={[styles.toggleChip, pregnancyForm.trimester === trimester && styles.toggleChipActive]}
+                          onPress={() => setPregnancyForm((prev) => ({ ...prev, trimester }))}
+                        >
+                          <Text style={[styles.toggleText, pregnancyForm.trimester === trimester && styles.toggleTextActive]}>
+                            {trimester.charAt(0).toUpperCase() + trimester.slice(1)}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
+
+                  <View style={styles.formSection}>
+                    <Text style={styles.formSectionTitle}>Pregnancy Date</Text>
+                    <Pressable style={styles.datePickerButton} onPress={() => setShowPregnancyDatePicker(true)}>
+                      <Text style={[styles.datePickerText, !pregnancyForm.pregnancyDate && styles.datePickerPlaceholder]}>
+                        {pregnancyForm.pregnancyDate ? formatDisplayDate(pregnancyForm.pregnancyDate) : 'Select pregnancy date'}
+                      </Text>
+                      <Ionicons name="calendar-outline" size={20} color="#64748B" />
+                    </Pressable>
+                  </View>
+
+                  {pregnancyForm.pregnancyDate && (
+                    <View style={styles.formSection}>
+                      <View style={styles.expectedMonthCard}>
+                        <View style={styles.expectedMonthHeader}>
+                          <Ionicons name="calendar" size={20} color="#0a7ea4" />
+                          <Text style={styles.expectedMonthTitle}>Expected Delivery Month</Text>
+                        </View>
+                        {(() => {
+                          const expectedMonths = calculateExpectedMonths(pregnancyForm.pregnancyDate);
+                          return expectedMonths ? (
+                            <Text style={styles.expectedMonthValue}>{expectedMonths.display}</Text>
+                          ) : null;
+                        })()}
+                        <Text style={styles.disclaimerText}>
+                          ⚠️ Note: This is an estimate and not a guarantee. Actual delivery may vary.
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+
+                  <View style={styles.formSection}>
+                    <View style={styles.blockedMonthsHeader}>
+                      <View>
+                        <Text style={styles.formSectionTitle}>Blocked Months</Text>
+                        <Text style={styles.helperText}>
+                          {pregnancyForm.trimester === 'early' ? 'Months 0-3' : pregnancyForm.trimester === 'mid' ? 'Months 3-6' : 'Months 6-9'} from pregnancy date
+                        </Text>
+                      </View>
+                      {pregnancyForm.blockedMonths.length > 0 && (
+                        <View style={styles.blockedCountBadge}>
+                          <Text style={styles.blockedCountText}>{pregnancyForm.blockedMonths.length}</Text>
+                        </View>
+                      )}
+                    </View>
+                    
+                    {pregnancyForm.pregnancyDate ? (
+                      <>
+                        <View style={styles.monthsGrid}>
+                          {pregnancyMonths.map((month) => {
+                            const isBlocked = pregnancyForm.blockedMonths.includes(month);
+                            return (
+                              <View
+                                key={month}
+                                style={[
+                                  styles.monthChipNew,
+                                  isBlocked ? styles.monthChipBlocked : styles.monthChipAvailable
+                                ]}
+                              >
+                                {isBlocked && (
+                                  <Ionicons name="lock-closed" size={14} color="#92400E" style={{ marginRight: 4 }} />
+                                )}
+                                <Text style={[
+                                  styles.monthChipTextNew,
+                                  isBlocked ? styles.monthChipTextBlocked : styles.monthChipTextAvailable
+                                ]}>
+                                  {month}
+                                </Text>
+                              </View>
+                            );
+                          })}
+                        </View>
+                        {pregnancyForm.blockedMonths.length > 0 && (
+                          <View style={styles.blockedMonthsSummary}>
+                            <Ionicons name="information-circle" size={18} color="#D97706" />
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.blockedMonthsLabel}>Blocked Period</Text>
+                              <Text style={styles.blockedMonthsText}>
+                                {formatBlockedMonths(pregnancyForm.blockedMonths.join(','))}
+                              </Text>
+                            </View>
+                          </View>
+                        )}
+                      </>
+                    ) : (
+                      <View style={styles.emptyStateBox}>
+                        <Ionicons name="calendar-outline" size={32} color="#CBD5E1" />
+                        <Text style={styles.emptyStateText}>Select pregnancy date to calculate blocked months</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  <Pressable style={styles.secondaryButton} onPress={() => setShowPregnancyModal(false)}>
+                    <Text style={styles.secondaryButtonText}>Done</Text>
+                  </Pressable>
+                </ScrollView>
+              </TouchableWithoutFeedback>
+            )}
           </KeyboardAvoidingView>
         </SafeAreaView>
       </Modal>
@@ -872,6 +1335,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 3,
+    ...(Platform.OS === 'web' && {
+      boxShadow: createBoxShadow('#0a7ea4', { width: 0, height: 4 }, 0.08, 12),
+    }),
   },
   addCardIcon: {
     width: 56,
@@ -941,6 +1407,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+    ...(Platform.OS === 'web' && {
+      boxShadow: createBoxShadow('#000', { width: 0, height: 2 }, 0.05, 8),
+    }),
   },
   profileCardContent: {
     flex: 1,
@@ -1038,32 +1507,43 @@ const styles = StyleSheet.create({
   },
   toggleRow: {
     flexDirection: 'row',
-    gap: 12,
+    flexWrap: 'wrap',
+    gap: 10,
     marginBottom: 24,
   },
   toggleChip: {
     flex: 1,
+    minWidth: 100,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 6,
     borderWidth: 2,
     borderColor: '#E2E8F0',
     borderRadius: 16,
-    paddingVertical: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
     backgroundColor: '#fff',
   },
   toggleChipActive: {
     backgroundColor: '#E0F2FE',
     borderColor: '#0a7ea4',
   },
+  toggleChipResponsive: {
+    maxWidth: '48%',
+    flexBasis: '48%',
+    flex: 0,
+    minWidth: 100,
+  },
   toggleEmoji: {
     fontSize: 24,
   },
   toggleText: {
     fontWeight: '700',
-    fontSize: 16,
+    fontSize: 14,
     color: '#64748B',
+    textAlign: 'center',
+    flexShrink: 1,
   },
   toggleTextActive: {
     color: '#0a7ea4',
@@ -1434,5 +1914,132 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     fontWeight: '700',
     fontSize: 16,
+  },
+  expectedMonthCard: {
+    backgroundColor: '#E0F2FE',
+    borderRadius: 16,
+    padding: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#0a7ea4',
+  },
+  expectedMonthHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  expectedMonthTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0a7ea4',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  expectedMonthValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 8,
+  },
+  disclaimerText: {
+    fontSize: 12,
+    color: '#64748B',
+    fontStyle: 'italic',
+    lineHeight: 18,
+  },
+  blockedMonthsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  blockedCountBadge: {
+    backgroundColor: '#FEF3C7',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#FCD34D',
+  },
+  blockedCountText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#92400E',
+  },
+  monthsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+  },
+  monthChipNew: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    minWidth: 80,
+    borderWidth: 2,
+  },
+  monthChipBlocked: {
+    backgroundColor: '#FEF3C7',
+    borderColor: '#FCD34D',
+  },
+  monthChipAvailable: {
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
+  },
+  monthChipTextNew: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  monthChipTextBlocked: {
+    color: '#92400E',
+  },
+  monthChipTextAvailable: {
+    color: '#94A3B8',
+  },
+  blockedMonthsSummary: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    padding: 16,
+    backgroundColor: '#FFFBEB',
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#FCD34D',
+    borderLeftWidth: 4,
+    borderLeftColor: '#D97706',
+  },
+  blockedMonthsLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#92400E',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  blockedMonthsText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#92400E',
+  },
+  emptyStateBox: {
+    padding: 32,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyStateText: {
+    fontSize: 14,
+    color: '#94A3B8',
+    textAlign: 'center',
+    marginTop: 12,
+    fontWeight: '500',
   },
 });

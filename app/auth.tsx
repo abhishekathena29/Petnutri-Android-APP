@@ -1,8 +1,28 @@
 import React, { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FormField } from '@/components/ui/form-field';
 import { useAuth } from '@/contexts/AuthContext';
+
+// Helper function to convert hex color to rgba
+const hexToRgba = (hex: string, opacity: number): string => {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+};
+
+// Helper function to create boxShadow from shadow props
+const createBoxShadow = (
+  shadowColor: string,
+  shadowOffset: { width: number; height: number },
+  shadowOpacity: number,
+  shadowRadius: number
+): string => {
+  const color = hexToRgba(shadowColor, shadowOpacity);
+  return `${shadowOffset.width}px ${shadowOffset.height}px ${shadowRadius}px 0px ${color}`;
+};
 
 type Mode = 'login' | 'signup';
 
@@ -13,6 +33,7 @@ const initialForm = {
 };
 
 export default function AuthScreen() {
+  const insets = useSafeAreaInsets();
   const { login, signup } = useAuth();
   const [mode, setMode] = useState<Mode>('login');
   const [form, setForm] = useState(initialForm);
@@ -78,9 +99,19 @@ export default function AuthScreen() {
   const submitDisabled = submitting || !form.email || !form.password || (mode === 'signup' && !form.fullName);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.select({ ios: 'padding', default: undefined })}>
-        <ScrollView contentContainerStyle={styles.container}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView 
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          keyboardDismissMode="interactive"
+          bounces={false}
+        >
           <View style={styles.card}>
             <Text style={styles.title}>{title}</Text>
             <Text style={styles.subtitle}>Manage all cattle nutrition insights in one place.</Text>
@@ -156,6 +187,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 30,
     shadowOffset: { width: 0, height: 10 },
+    ...(Platform.OS === 'web' && {
+      boxShadow: createBoxShadow('#0F172A', { width: 0, height: 10 }, 0.08, 30),
+    }),
   },
   title: {
     fontSize: 28,

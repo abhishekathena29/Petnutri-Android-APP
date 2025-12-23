@@ -16,13 +16,18 @@
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/icon.png"
       },
-      "edgeToEdgeEnabled": true,
+      "edgeToEdgeEnabled": false,
+      "statusBar": {
+        "barStyle": "default",
+        "backgroundColor": "transparent",
+        "translucent": true
+      },
       "predictiveBackGestureEnabled": false,
       "package": "com.petnutri.app"
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/icon.png"
     },
     "plugins": [
       "expo-router",

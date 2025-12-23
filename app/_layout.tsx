@@ -61,7 +61,7 @@ export default function RootLayout() {
       <SelectedCattleProvider>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <RootLayoutNav />
-          <StatusBar style="auto" />
+          <StatusBar style="default" translucent backgroundColor="transparent" />
         </ThemeProvider>
       </SelectedCattleProvider>
     </AuthProvider>

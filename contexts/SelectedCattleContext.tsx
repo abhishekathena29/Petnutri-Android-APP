@@ -1,11 +1,12 @@
 import { useUserCollection } from '@/hooks/use-user-collection';
 import { CattleProfile } from '@/types/models';
 import React, { createContext, useCallback, useContext, useState } from 'react';
+import { Platform } from 'react-native';
 import { useAuth } from './AuthContext';
 
 interface SelectedCattleContextShape {
   selectedCattle: (CattleProfile & { id: string }) | null;
-  setSelectedCattle: (cattle: (CattleProfile & { id: string }) | null) => void;
+  setSelectedCattle: (cattle: (CattleProfile & { id: string }) | null) => Promise<void>;
   cattle: Array<CattleProfile & { id: string }>;
   loading: boolean;
 }
@@ -24,14 +25,25 @@ export const SelectedCattleProvider = ({ children }: { children: React.ReactNode
     setSelectedCattleState(cattle);
     if (user) {
       try {
-        const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-        if (cattle) {
-          await AsyncStorage.setItem(`selectedCattle_${user.uid}`, cattle.id);
+        // Only use AsyncStorage on native platforms, not on web
+        if (Platform.OS !== 'web') {
+          const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+          if (cattle) {
+            await AsyncStorage.setItem(`selectedCattle_${user.uid}`, cattle.id);
+          } else {
+            await AsyncStorage.removeItem(`selectedCattle_${user.uid}`);
+          }
         } else {
-          await AsyncStorage.removeItem(`selectedCattle_${user.uid}`);
+          // On web, use localStorage instead
+          if (cattle) {
+            localStorage.setItem(`selectedCattle_${user.uid}`, cattle.id);
+          } else {
+            localStorage.removeItem(`selectedCattle_${user.uid}`);
+          }
         }
       } catch (error) {
         console.error('Error saving selected cattle:', error);
+        // Don't throw - just log the error, state is already updated
       }
     }
   }, [user]);

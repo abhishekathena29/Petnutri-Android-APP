@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FormField } from '@/components/ui/form-field';
 import { SectionCard } from '@/components/ui/section-card';
@@ -11,16 +12,14 @@ import { useUserCollection } from '@/hooks/use-user-collection';
 import { addUserDocument, deleteUserDocument } from '@/services/firestore';
 import { CattleProfile, ProgressLog } from '@/types/models';
 
-const observationOptions = ['Energy', 'Health', 'Appetite', 'Coat', 'Behavior', 'Weight', 'Mobility'];
+const activityOptions: ('normal' | 'moderate' | 'hard')[] = ['normal', 'moderate', 'hard'];
 
 const initialForm = {
   cattleId: '',
   logDate: '',
-  nutritionScore: '',
-  mealCompliance: '',
-  exerciseMinutes: '',
-  observations: '',
-  observationRating: 0,
+  mealTake: false,
+  water: '',
+  activity: 'normal' as 'normal' | 'moderate' | 'hard',
 };
 
 const getWeekNumber = (date: Date) => {
@@ -32,6 +31,7 @@ const getWeekNumber = (date: Date) => {
 };
 
 export default function ProgressScreen() {
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { selectedCattle: contextSelectedCattle } = useSelectedCattle();
   const { data: herd } = useUserCollection<CattleProfile>('cattle');
@@ -46,15 +46,20 @@ export default function ProgressScreen() {
 
   // Auto-select cattle from context
   React.useEffect(() => {
-    if (contextSelectedCattle && !form.cattleId) {
-      setForm((prev) => ({ ...prev, cattleId: contextSelectedCattle.id }));
+    if (contextSelectedCattle) {
+      const today = new Date();
+      const todayString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      setForm((prev) => ({ 
+        ...prev, 
+        cattleId: contextSelectedCattle.id,
+        logDate: prev.logDate || todayString, // Set today's date if not already set
+      }));
     }
   }, [contextSelectedCattle]);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showObservationDropdown, setShowObservationDropdown] = useState(false);
 
   // Date picker state
   const currentYear = new Date().getFullYear();
@@ -79,6 +84,48 @@ export default function ProgressScreen() {
 
   // Filter daily logs only from filtered logs
   const dailyLogs = useMemo(() => filteredLogs.filter((log) => log.periodType === 'daily'), [filteredLogs]);
+
+  // Calculate water consumption stats
+  const waterStats = useMemo(() => {
+    if (dailyLogs.length === 0) {
+      return {
+        total: 0,
+        average: 0,
+        byCattle: [],
+      };
+    }
+
+    const waterByCattle = new Map<string, { cattleName: string; total: number; count: number }>();
+    let totalWater = 0;
+    let waterCount = 0;
+
+    dailyLogs.forEach((log) => {
+      if (log.water !== undefined && log.water !== null) {
+        totalWater += log.water;
+        waterCount++;
+
+        const existing = waterByCattle.get(log.cattleId) || {
+          cattleName: log.cattleName,
+          total: 0,
+          count: 0,
+        };
+        existing.total += log.water;
+        existing.count++;
+        waterByCattle.set(log.cattleId, existing);
+      }
+    });
+
+    return {
+      total: totalWater,
+      average: waterCount > 0 ? Number((totalWater / waterCount).toFixed(1)) : 0,
+      byCattle: Array.from(waterByCattle.values()).map((entry) => ({
+        cattleName: entry.cattleName,
+        total: entry.total,
+        average: Number((entry.total / entry.count).toFixed(1)),
+        count: entry.count,
+      })),
+    };
+  }, [dailyLogs]);
 
   // Calculate weekly and monthly stats from daily logs grouped by cattle and type
   const stats = useMemo(() => {
@@ -364,15 +411,25 @@ export default function ProgressScreen() {
         periodType: 'daily',
         periodLabel: formatDisplayDate(form.logDate),
         logDate: form.logDate,
-        nutritionScore: Number(form.nutritionScore) || 0,
-        mealCompliance: Number(form.mealCompliance) || 0,
-        exerciseMinutes: Number(form.exerciseMinutes) || 0,
-        observations: form.observations,
-        observationRating: form.observationRating || undefined,
+        nutritionScore: 0, // Deprecated, kept for backward compatibility
+        mealCompliance: 0, // Deprecated, kept for backward compatibility
+        exerciseMinutes: 0, // Deprecated, kept for backward compatibility
+        observations: '', // Deprecated, kept for backward compatibility
+        observationRating: undefined, // Deprecated, kept for backward compatibility
+        mealTake: form.mealTake,
+        water: form.water ? Number(form.water) : undefined,
+        activity: form.activity,
       });
+      // Reset form but keep cattleId and set today's date for next entry
+      const today = new Date();
+      const todayString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       setForm({
         ...initialForm,
-        observationRating: 0,
+        cattleId: form.cattleId, // Keep the selected cattle
+        logDate: todayString, // Set to today's date
+        mealTake: false,
+        water: '',
+        activity: 'normal',
       });
       Alert.alert('Success', 'Daily log saved!');
     } catch (err) {
@@ -406,41 +463,37 @@ export default function ProgressScreen() {
     ]);
   };
 
-  const selectObservation = (obs: string) => {
-    handleChange('observations', obs);
-    handleChange('observationRating', 0); // Reset rating when new observation is selected
-    setShowObservationDropdown(false);
-  };
-
-  const selectRating = (rating: number) => {
-    handleChange('observationRating', rating);
-  };
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.container}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <ScrollView 
+        contentContainerStyle={styles.container} 
+        keyboardShouldPersistTaps="handled"
+      >
+        {!contextSelectedCattle ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="person-outline" size={64} color="#CBD5E1" />
+            <Text style={styles.emptyTitle}>No Profile Selected</Text>
+            <Text style={styles.emptySubtitle}>Please select a cattle profile from the home tab to log progress</Text>
+          </View>
+        ) : (
+          <>
         <SectionCard title="Daily Progress Log">
-          <Text style={styles.helper}>Save daily logs for nutrition, meal compliance, and exercise tracking.</Text>
+          <Text style={styles.helper}>Save daily logs for nutrition, meal compliance, and activity tracking.</Text>
 
           <View style={styles.labelContainer}>
-            <Text style={styles.label}>Cattle Name</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.scroller}>
-              {herd.length === 0 ? (
-                <Text style={styles.helper}>Create cattle first.</Text>
-              ) : (
-                herd.map((cattle) => (
-                  <Pressable
-                    key={cattle.id}
-                    style={[styles.cattleChip, form.cattleId === cattle.id && styles.cattleChipActive]}
-                    onPress={() => handleChange('cattleId', cattle.id!)}
-                  >
-                    <Text style={[styles.cattleChipText, form.cattleId === cattle.id && styles.cattleChipTextActive]}>
-                      {cattle.name}
-                    </Text>
-                  </Pressable>
-                ))
-              )}
-            </ScrollView>
+            <Text style={styles.label}>Selected Cattle</Text>
+            <View style={styles.selectedCattleCard}>
+              <View style={styles.selectedCattleInfo}>
+                <Ionicons name={contextSelectedCattle.type === 'cow' ? 'logo-octocat' : 'git-branch-outline'} size={24} color={contextSelectedCattle.type === 'cow' ? '#0a7ea4' : '#D97706'} />
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={styles.selectedCattleName}>{contextSelectedCattle.name}</Text>
+                  <Text style={styles.selectedCattleMeta}>
+                    {contextSelectedCattle.type === 'cow' ? 'Cow' : 'Horse'} • {contextSelectedCattle.weightValue || '—'} {contextSelectedCattle.weightUnit || 'kg'}
+                  </Text>
+                </View>
+              </View>
+            </View>
           </View>
 
           <View style={styles.labelContainer}>
@@ -453,59 +506,52 @@ export default function ProgressScreen() {
             </Pressable>
           </View>
 
-          <View style={styles.row}>
-            <FormField
-              label="Nutrition Score"
-              placeholder="80"
-              keyboardType="numeric"
-              value={form.nutritionScore}
-              onChangeText={(text) => handleChange('nutritionScore', text)}
-              style={{ flex: 1 }}
-            />
-            <View style={{ width: 12 }} />
-            <FormField
-              label="Meal Compliance %"
-              placeholder="90"
-              keyboardType="numeric"
-              value={form.mealCompliance}
-              onChangeText={(text) => handleChange('mealCompliance', text)}
-              style={{ flex: 1 }}
-            />
-          </View>
-          <FormField
-            label="Exercise Minutes"
-            placeholder="120"
-            keyboardType="numeric"
-            value={form.exerciseMinutes}
-            onChangeText={(text) => handleChange('exerciseMinutes', text)}
-          />
-
+          {/* Meal Take */}
           <View style={styles.labelContainer}>
-            <Text style={styles.label}>Observations</Text>
-            <Pressable style={styles.dropdownButton} onPress={() => setShowObservationDropdown(true)}>
-              <Text style={[styles.dropdownText, !form.observations && styles.dropdownPlaceholder]}>
-                {form.observations || 'Select observation type'}
-              </Text>
-              <Ionicons name="chevron-down" size={20} color="#64748B" />
-            </Pressable>
-            {form.observations && (
-              <View style={styles.ratingContainer}>
-                <Text style={styles.ratingLabel}>Rate {form.observations} (1-5):</Text>
-                <View style={styles.ratingRow}>
-                  {[1, 2, 3, 4, 5].map((rating) => (
-                    <Pressable
-                      key={rating}
-                      style={[styles.ratingButton, form.observationRating === rating && styles.ratingButtonActive]}
-                      onPress={() => selectRating(rating)}
-                    >
-                      <Text style={[styles.ratingText, form.observationRating === rating && styles.ratingTextActive]}>
-                        {rating}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-            )}
+            <Text style={styles.label}>Meal Take</Text>
+            <View style={styles.switchContainer}>
+              <Text style={styles.switchLabel}>Meal taken today</Text>
+              <Switch
+                value={form.mealTake}
+                onValueChange={(value) => handleChange('mealTake', value)}
+                trackColor={{ false: '#CBD5E1', true: '#0a7ea4' }}
+                thumbColor={form.mealTake ? '#fff' : '#f4f3f4'}
+              />
+            </View>
+          </View>
+
+          {/* Water Intake */}
+          <View style={styles.labelContainer}>
+            <Text style={styles.label}>Water Intake (Liters)</Text>
+            <View style={styles.rangeContainer}>
+              <FormField
+                placeholder="20"
+                keyboardType="numeric"
+                value={form.water}
+                onChangeText={(text) => handleChange('water', text)}
+                style={{ flex: 1 }}
+              />
+              <Text style={styles.rangeLabel}>L</Text>
+            </View>
+            <Text style={styles.helperText}>Daily water consumption in liters</Text>
+          </View>
+
+          {/* Activity Level */}
+          <View style={styles.labelContainer}>
+            <Text style={styles.label}>Activity Level</Text>
+            <View style={styles.toggleRow}>
+              {activityOptions.map((option) => (
+                <Pressable
+                  key={option}
+                  style={[styles.optionChip, form.activity === option && styles.optionChipActive]}
+                  onPress={() => handleChange('activity', option)}
+                >
+                  <Text style={[styles.optionText, form.activity === option && styles.optionTextActive]}>
+                    {option}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -515,130 +561,66 @@ export default function ProgressScreen() {
           </Pressable>
         </SectionCard>
 
-        <SectionCard title="Stats by Cattle Name">
-          {stats.byCattle.length === 0 ? (
-            <Text style={styles.helper}>No data yet. Add daily logs to see stats.</Text>
+        <SectionCard title="Water Consumption Statistics">
+          {waterStats.byCattle.length === 0 ? (
+            <View style={styles.emptyStatsState}>
+              <Ionicons name="water-outline" size={48} color="#CBD5E1" />
+              <Text style={styles.emptyStatsText}>No water data yet</Text>
+              <Text style={styles.emptyStatsSubtext}>Add daily logs with water intake to see statistics</Text>
+            </View>
           ) : (
-            stats.byCattle.map((cattleStat, idx) => (
-              <View key={idx} style={styles.cattleStatContainer}>
-                <View style={styles.cattleStatHeader}>
-                  <Text style={styles.cattleStatName}>{cattleStat.cattleName}</Text>
-                  <Tag label={cattleStat.cattleType === 'cow' ? '🐄 Cow' : cattleStat.cattleType === 'horse' ? '🐴 Horse' : 'Unknown'} tone="primary" />
+            <>
+              <View style={styles.waterSummaryContainer}>
+                <View style={styles.waterSummaryCard}>
+                  <Ionicons name="water-outline" size={24} color="#3B82F6" />
+                  <View style={styles.waterSummaryContent}>
+                    <Text style={styles.waterSummaryLabel}>Total Water</Text>
+                    <Text style={styles.waterSummaryValue}>{waterStats.total.toFixed(1)} L</Text>
+                  </View>
                 </View>
-
-                <Text style={styles.periodSectionTitle}>Weekly</Text>
-                {cattleStat.weekly.length === 0 ? (
-                  <Text style={styles.helper}>No weekly data</Text>
-                ) : (
-                  cattleStat.weekly.map((stat, weekIdx) => (
-                    <View key={weekIdx} style={styles.chartContainer}>
-                      <Text style={styles.chartTitle}>{stat.week}</Text>
-                      <BarChart data={[{ label: 'Nutrition', value: stat.nutrition, color: '#0a7ea4' }]} max={100} />
-                      <BarChart data={[{ label: 'Exercise', value: stat.exercise, color: '#f97316' }]} max={200} />
-                      {stat.observations.map((obs) => (
-                        <BarChart key={obs.type} data={[{ label: obs.type, value: obs.value, color: '#22c55e' }]} max={100} />
-                      ))}
-                    </View>
-                  ))
-                )}
-
-                <Text style={styles.periodSectionTitle}>Monthly</Text>
-                {cattleStat.monthly.length === 0 ? (
-                  <Text style={styles.helper}>No monthly data</Text>
-                ) : (
-                  cattleStat.monthly.map((stat, monthIdx) => (
-                    <View key={monthIdx} style={styles.chartContainer}>
-                      <Text style={styles.chartTitle}>{stat.month}</Text>
-                      <BarChart data={[{ label: 'Nutrition', value: stat.nutrition, color: '#0a7ea4' }]} max={100} />
-                      <BarChart data={[{ label: 'Exercise', value: stat.exercise, color: '#f97316' }]} max={200} />
-                      {stat.observations.map((obs) => (
-                        <BarChart key={obs.type} data={[{ label: obs.type, value: obs.value, color: '#22c55e' }]} max={100} />
-                      ))}
-                    </View>
-                  ))
-                )}
+                <View style={styles.waterSummaryCard}>
+                  <Ionicons name="stats-chart-outline" size={24} color="#3B82F6" />
+                  <View style={styles.waterSummaryContent}>
+                    <Text style={styles.waterSummaryLabel}>Average Daily</Text>
+                    <Text style={styles.waterSummaryValue}>{waterStats.average} L</Text>
+                  </View>
+                </View>
               </View>
-            ))
+
+              <Text style={styles.waterSectionTitle}>By Cattle</Text>
+              {waterStats.byCattle.map((cattleWater, idx) => (
+                <View key={idx} style={styles.waterCattleCard}>
+                  <View style={styles.waterCattleHeader}>
+                    <Text style={styles.waterCattleName}>{cattleWater.cattleName}</Text>
+                    <View style={styles.waterCattleBadge}>
+                      <Text style={styles.waterCattleBadgeText}>{cattleWater.count} entries</Text>
+                    </View>
+                  </View>
+                  <View style={styles.waterCattleStats}>
+                    <View style={styles.waterStatItem}>
+                      <Text style={styles.waterStatLabel}>Total</Text>
+                      <Text style={styles.waterStatValue}>{cattleWater.total.toFixed(1)} L</Text>
+                    </View>
+                    <View style={styles.waterStatItem}>
+                      <Text style={styles.waterStatLabel}>Average</Text>
+                      <Text style={styles.waterStatValue}>{cattleWater.average} L/day</Text>
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </>
           )}
-        </SectionCard>
-
-        <SectionCard title="Stats by Type (Cow vs Horse)">
-          <View style={styles.typeStatsContainer}>
-            <View style={styles.typeSection}>
-              <Text style={styles.typeTitle}>🐄 Cows</Text>
-              <Text style={styles.periodSectionTitle}>Weekly</Text>
-              {stats.byType.cow.weekly.length === 0 ? (
-                <Text style={styles.helper}>No weekly cow data yet</Text>
-              ) : (
-                stats.byType.cow.weekly.map((stat, idx) => (
-                  <View key={idx} style={styles.chartContainer}>
-                    <Text style={styles.chartTitle}>{stat.period}</Text>
-                    <BarChart data={[{ label: 'Nutrition', value: stat.nutrition, color: '#0a7ea4' }]} max={100} />
-                    <BarChart data={[{ label: 'Exercise', value: stat.exercise, color: '#f97316' }]} max={200} />
-                    {stat.observations.map((obs) => (
-                      <BarChart key={obs.type} data={[{ label: obs.type, value: obs.value, color: '#22c55e' }]} max={100} />
-                    ))}
-                  </View>
-                ))
-              )}
-              <Text style={styles.periodSectionTitle}>Monthly</Text>
-              {stats.byType.cow.monthly.length === 0 ? (
-                <Text style={styles.helper}>No monthly cow data yet</Text>
-              ) : (
-                stats.byType.cow.monthly.map((stat, idx) => (
-                  <View key={idx} style={styles.chartContainer}>
-                    <Text style={styles.chartTitle}>{stat.period}</Text>
-                    <BarChart data={[{ label: 'Nutrition', value: stat.nutrition, color: '#0a7ea4' }]} max={100} />
-                    <BarChart data={[{ label: 'Exercise', value: stat.exercise, color: '#f97316' }]} max={200} />
-                    {stat.observations.map((obs) => (
-                      <BarChart key={obs.type} data={[{ label: obs.type, value: obs.value, color: '#22c55e' }]} max={100} />
-                    ))}
-                  </View>
-                ))
-              )}
-            </View>
-
-            <View style={styles.typeSection}>
-              <Text style={styles.typeTitle}>🐴 Horses</Text>
-              <Text style={styles.periodSectionTitle}>Weekly</Text>
-              {stats.byType.horse.weekly.length === 0 ? (
-                <Text style={styles.helper}>No weekly horse data yet</Text>
-              ) : (
-                stats.byType.horse.weekly.map((stat, idx) => (
-                  <View key={idx} style={styles.chartContainer}>
-                    <Text style={styles.chartTitle}>{stat.period}</Text>
-                    <BarChart data={[{ label: 'Nutrition', value: stat.nutrition, color: '#0a7ea4' }]} max={100} />
-                    <BarChart data={[{ label: 'Exercise', value: stat.exercise, color: '#f97316' }]} max={200} />
-                    {stat.observations.map((obs) => (
-                      <BarChart key={obs.type} data={[{ label: obs.type, value: obs.value, color: '#22c55e' }]} max={100} />
-                    ))}
-                  </View>
-                ))
-              )}
-              <Text style={styles.periodSectionTitle}>Monthly</Text>
-              {stats.byType.horse.monthly.length === 0 ? (
-                <Text style={styles.helper}>No monthly horse data yet</Text>
-              ) : (
-                stats.byType.horse.monthly.map((stat, idx) => (
-                  <View key={idx} style={styles.chartContainer}>
-                    <Text style={styles.chartTitle}>{stat.period}</Text>
-                    <BarChart data={[{ label: 'Nutrition', value: stat.nutrition, color: '#0a7ea4' }]} max={100} />
-                    <BarChart data={[{ label: 'Exercise', value: stat.exercise, color: '#f97316' }]} max={200} />
-                    {stat.observations.map((obs) => (
-                      <BarChart key={obs.type} data={[{ label: obs.type, value: obs.value, color: '#22c55e' }]} max={100} />
-                    ))}
-                  </View>
-                ))
-              )}
-            </View>
-          </View>
         </SectionCard>
 
         <SectionCard title="Daily Logs">
           {loading ? (
             <ActivityIndicator />
           ) : dailyLogs.length === 0 ? (
-            <Text style={styles.helper}>No daily logs yet.</Text>
+            <View style={styles.emptyLogsState}>
+              <Ionicons name="document-outline" size={48} color="#CBD5E1" />
+              <Text style={styles.emptyLogsText}>No daily logs yet</Text>
+              <Text style={styles.emptyLogsSubtext}>Create your first log above</Text>
+            </View>
           ) : (
             dailyLogs.map((log) => (
               <View key={log.id} style={styles.logCard}>
@@ -659,25 +641,34 @@ export default function ProgressScreen() {
                     )}
                   </Pressable>
                 </View>
-                <View style={styles.metricsRow}>
-                  <Metric label="Nutrition" value={`${log.nutritionScore}%`} />
-                  <Metric label="Meal" value={`${log.mealCompliance}%`} />
-                  <Metric label="Exercise" value={`${log.exerciseMinutes} min`} />
+                {/* Parameters */}
+                <View style={styles.parametersRow}>
+                  {log.mealTake !== undefined && (
+                    <View style={styles.parameterBadge}>
+                      <Ionicons name={log.mealTake ? "checkmark-circle" : "close-circle"} size={16} color={log.mealTake ? "#10B981" : "#EF4444"} />
+                      <Text style={styles.parameterText}>Meal: {log.mealTake ? 'Taken' : 'Not Taken'}</Text>
+                    </View>
+                  )}
+                  {log.water !== undefined && (
+                    <View style={styles.parameterBadge}>
+                      <Ionicons name="water-outline" size={16} color="#3B82F6" />
+                      <Text style={styles.parameterText}>Water: {log.water}L</Text>
+                    </View>
+                  )}
+                  {log.activity && (
+                    <View style={styles.parameterBadge}>
+                      <Ionicons name="flash-outline" size={16} color="#F59E0B" />
+                      <Text style={styles.parameterText}>Activity: {log.activity}</Text>
+                    </View>
+                  )}
                 </View>
-                {log.observations && (
-                  <View style={styles.observationRow}>
-                    <Text style={styles.logObservation}>{log.observations}</Text>
-                    {log.observationRating && (
-                      <View style={styles.ratingBadge}>
-                        <Text style={styles.ratingBadgeText}>Rating: {log.observationRating}/5</Text>
-                      </View>
-                    )}
-                  </View>
-                )}
+                
               </View>
             ))
           )}
         </SectionCard>
+        </>
+        )}
       </ScrollView>
 
       {/* Date Picker Modal */}
@@ -751,26 +742,6 @@ export default function ProgressScreen() {
         </Pressable>
       </Modal>
 
-      {/* Observation Dropdown Modal */}
-      <Modal visible={showObservationDropdown} transparent animationType="fade" onRequestClose={() => setShowObservationDropdown(false)}>
-        <Pressable style={styles.modalOverlay} onPress={() => setShowObservationDropdown(false)}>
-          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Observation</Text>
-              <Pressable onPress={() => setShowObservationDropdown(false)}>
-                <Ionicons name="close" size={24} color="#64748B" />
-              </Pressable>
-            </View>
-            <ScrollView>
-              {observationOptions.map((option) => (
-                <Pressable key={option} style={styles.optionItem} onPress={() => selectObservation(option)}>
-                  <Text style={styles.optionText}>{option}</Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -1212,5 +1183,246 @@ const styles = StyleSheet.create({
   optionText: {
     fontSize: 16,
     color: '#0F172A',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 60,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    marginTop: 20,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 15,
+    color: '#64748B',
+    textAlign: 'center',
+    paddingHorizontal: 40,
+  },
+  selectedCattleCard: {
+    backgroundColor: '#F0F9FF',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: '#E0F2FE',
+    marginTop: 8,
+  },
+  selectedCattleInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  selectedCattleName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 4,
+  },
+  selectedCattleMeta: {
+    fontSize: 13,
+    color: '#64748B',
+  },
+  emptyStatsState: {
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  emptyStatsText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#64748B',
+    marginTop: 12,
+  },
+  emptyStatsSubtext: {
+    fontSize: 14,
+    color: '#94A3B8',
+    marginTop: 4,
+  },
+  emptyLogsState: {
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  emptyLogsText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#64748B',
+    marginTop: 12,
+  },
+  emptyLogsSubtext: {
+    fontSize: 14,
+    color: '#94A3B8',
+    marginTop: 4,
+  },
+  // New Parameter Styles
+  switchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#D0D7DE',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  switchLabel: {
+    fontSize: 15,
+    color: '#111',
+    flex: 1,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  optionChip: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#fff',
+    minWidth: 100,
+  },
+  optionChipActive: {
+    backgroundColor: '#EEF2FF',
+    borderColor: '#4338CA',
+  },
+  optionText: {
+    color: '#4338CA',
+    fontSize: 14,
+    fontWeight: '500',
+    textTransform: 'capitalize',
+  },
+  optionTextActive: {
+    fontWeight: '700',
+    color: '#312E81',
+  },
+  rangeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  rangeLabel: {
+    fontSize: 15,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#94A3B8',
+    marginTop: 6,
+  },
+  parametersRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  parameterBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  parameterText: {
+    fontSize: 12,
+    color: '#475569',
+    fontWeight: '500',
+    textTransform: 'capitalize',
+  },
+  // Water Statistics Styles
+  waterSummaryContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  waterSummaryCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EFF6FF',
+    borderRadius: 12,
+    padding: 16,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
+  },
+  waterSummaryContent: {
+    flex: 1,
+  },
+  waterSummaryLabel: {
+    fontSize: 12,
+    color: '#64748B',
+    marginBottom: 4,
+  },
+  waterSummaryValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1E40AF',
+  },
+  waterSectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#475569',
+    marginTop: 8,
+    marginBottom: 12,
+    textTransform: 'uppercase',
+  },
+  waterCattleCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  waterCattleHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  waterCattleName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  waterCattleBadge: {
+    backgroundColor: '#DBEAFE',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  waterCattleBadgeText: {
+    fontSize: 12,
+    color: '#1E40AF',
+    fontWeight: '600',
+  },
+  waterCattleStats: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  waterStatItem: {
+    flex: 1,
+  },
+  waterStatLabel: {
+    fontSize: 12,
+    color: '#64748B',
+    marginBottom: 4,
+  },
+  waterStatValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#3B82F6',
   },
 });

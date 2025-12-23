@@ -4,13 +4,14 @@ import {
     ActivityIndicator,
     Alert,
     Modal,
+    Platform,
     Pressable,
-    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
     View,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Tag } from '@/components/ui/tag';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,6 +19,25 @@ import { useSelectedCattle } from '@/contexts/SelectedCattleContext';
 import { useUserCollection } from '@/hooks/use-user-collection';
 import { addUserDocument, deleteUserDocument } from '@/services/firestore';
 import { CattleProfile, MealPlan } from '@/types/models';
+
+// Helper function to convert hex color to rgba
+const hexToRgba = (hex: string, opacity: number): string => {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+};
+
+// Helper function to create boxShadow from shadow props
+const createBoxShadow = (
+  shadowColor: string,
+  shadowOffset: { width: number; height: number },
+  shadowOpacity: number,
+  shadowRadius: number
+): string => {
+  const color = hexToRgba(shadowColor, shadowOpacity);
+  return `${shadowOffset.width}px ${shadowOffset.height}px ${shadowRadius}px 0px ${color}`;
+};
 
 type RecipeType = {
   id: string;
@@ -171,142 +191,142 @@ const cowRecipes: RecipeType[] = [
   },
 ];
 
-// Pre-defined recipes for Horses - 2-3 recipes per diet focus
+// Regional Horse Feeds - India
 const horseRecipes: RecipeType[] = [
-  // MAINTENANCE (3 recipes)
+  // RAJASTHAN
   {
-    id: 'horse-m1',
-    name: 'Balanced Pasture Diet',
+    id: 'horse-raj-1',
+    name: 'Sewan Grass Hay',
     dietType: 'maintenance',
-    calories: 2400,
-    ingredients: 'Quality grass hay, Small grain ration, Mineral block, Fresh water',
-    nutrition: 'Protein 10% • Fiber 28% • Fat 3% • Balanced nutrients',
-    feedingTime: 'Morning & Evening',
+    calories: 4400,
+    ingredients: 'Sewan grass hay, Fresh water, Mineral supplement',
+    nutrition: 'Calories: 4400 kcal/kg • Fiber: 42.1% • Protein: 6.0% • Carbs: 50% • Fat: 2.2%',
+    feedingTime: 'Monsoon-rainy season',
     icon: 'leaf-outline',
     animalType: 'horse',
   },
   {
-    id: 'horse-m2',
-    name: 'Senior Horse Comfort',
-    dietType: 'maintenance',
-    calories: 2200,
-    ingredients: 'Soaked hay cubes, Senior feed, Joint supplements, Probiotics',
-    nutrition: 'Protein 14% • Easy to chew • Joint support • Gut health',
-    feedingTime: 'Twice daily',
-    icon: 'medkit-outline',
-    animalType: 'horse',
-  },
-  {
-    id: 'horse-m3',
-    name: 'Digestive Health Blend',
-    dietType: 'maintenance',
-    calories: 2300,
-    ingredients: 'Grass hay, Psyllium husk, Probiotics, Apple cider vinegar',
-    nutrition: 'Protein 11% • High fiber • Gut flora support • Sand clearance',
-    feedingTime: 'Daily with regular feed',
-    icon: 'heart-outline',
-    animalType: 'horse',
-  },
-  // WEIGHT GAIN (3 recipes)
-  {
-    id: 'horse-g1',
-    name: 'Growing Foal Formula',
-    dietType: 'weightGain',
-    calories: 3200,
-    ingredients: 'Mare milk/replacer, Creep feed, Quality hay, Growth minerals',
-    nutrition: 'Protein 16% • Calcium 0.8% • Phosphorus 0.5% • Balanced growth',
-    feedingTime: 'Multiple daily feedings',
-    icon: 'resize-outline',
-    animalType: 'horse',
-  },
-  {
-    id: 'horse-g2',
-    name: 'Weight Builder Plus',
-    dietType: 'weightGain',
-    calories: 3500,
-    ingredients: 'Rice bran, Beet pulp, Vegetable oil, High-fat pellets, Alfalfa',
-    nutrition: 'Protein 14% • Fat 10% • Fiber 18% • Calorie dense',
-    feedingTime: 'Three times daily',
-    icon: 'trending-up-outline',
-    animalType: 'horse',
-  },
-  {
-    id: 'horse-g3',
-    name: 'Muscle Mass Builder',
-    dietType: 'weightGain',
-    calories: 3400,
-    ingredients: 'Oats, Soybean meal, Flaxseed, Amino acid supplement, Quality hay',
-    nutrition: 'Protein 18% • Fat 8% • Fiber 16% • Muscle support',
-    feedingTime: 'Morning & Evening with midday snack',
-    icon: 'barbell-outline',
-    animalType: 'horse',
-  },
-  // WEIGHT LOSS (3 recipes)
-  {
-    id: 'horse-l1',
-    name: 'Easy Keeper Diet',
-    dietType: 'weightLoss',
-    calories: 1600,
-    ingredients: 'Timothy hay, Low-starch pellets, Vitamin supplement, Salt',
-    nutrition: 'Protein 10% • Fiber 30% • Low sugar • Low starch',
-    feedingTime: 'Small portions throughout day',
-    icon: 'fitness-outline',
-    animalType: 'horse',
-  },
-  {
-    id: 'horse-l2',
-    name: 'Metabolic Support Mix',
-    dietType: 'weightLoss',
-    calories: 1400,
-    ingredients: 'Soaked hay, Ration balancer, Chromium supplement, Limited pasture',
-    nutrition: 'Protein 12% • Fiber 35% • Very low sugar • Metabolic safe',
-    feedingTime: 'Slow feeder hay nets',
-    icon: 'medical-outline',
-    animalType: 'horse',
-  },
-  {
-    id: 'horse-l3',
-    name: 'Low Sugar Grass Diet',
-    dietType: 'weightLoss',
-    calories: 1800,
-    ingredients: 'Late-cut grass hay, Mineral supplement, Limited grazing time',
-    nutrition: 'Protein 8% • Fiber 32% • Low NSC • Weight management',
-    feedingTime: 'Controlled portions twice daily',
-    icon: 'trending-down-outline',
-    animalType: 'horse',
-  },
-  // PERFORMANCE (3 recipes)
-  {
-    id: 'horse-p1',
-    name: 'Performance Horse Fuel',
+    id: 'horse-raj-2',
+    name: 'Bajra Grain',
     dietType: 'performance',
-    calories: 3800,
-    ingredients: 'Oats, Barley, Beet pulp, Rice bran, Flaxseed, Electrolytes',
-    nutrition: 'Protein 14% • Fat 8% • Fiber 12% • High energy',
-    feedingTime: '3 hours before exercise',
+    calories: 3200,
+    ingredients: 'Bajra grain, Fresh water, Salt supplement',
+    nutrition: 'Calories: 3200 kcal/kg • Fiber: 3.2% • Protein: 12.5% • Carbs: 67.1% • Fat: 4.8%',
+    feedingTime: 'Post-monsoon season',
     icon: 'flash-outline',
     animalType: 'horse',
   },
   {
-    id: 'horse-p2',
-    name: 'Endurance Trail Mix',
-    dietType: 'performance',
-    calories: 3400,
-    ingredients: 'Beet pulp, Alfalfa pellets, Vegetable oil, Electrolyte paste',
-    nutrition: 'Protein 12% • Fat 10% • Slow-release energy • Hydration focus',
-    feedingTime: 'Pre and post ride',
-    icon: 'trail-sign-outline',
+    id: 'horse-raj-3',
+    name: 'Wheat Bran',
+    dietType: 'maintenance',
+    calories: 2700,
+    ingredients: 'Wheat bran, Fresh water, Mineral block',
+    nutrition: 'Calories: 2700 kcal/kg • Fiber: 15.0% • Protein: 16.0% • Carbs: 60% • Fat: 2.2%',
+    feedingTime: 'Year-round',
+    icon: 'nutrition-outline',
+    animalType: 'horse',
+  },
+  // PUNJAB
+  {
+    id: 'horse-pun-1',
+    name: 'Wheat Straw',
+    dietType: 'weightLoss',
+    calories: 1400,
+    ingredients: 'Wheat straw, Fresh water, Vitamin supplement',
+    nutrition: 'Calories: 1400 kcal/kg • Fiber: 38% • Protein: 4% • Carbs: 20% • Fat: 2%',
+    feedingTime: 'Year-round',
+    icon: 'fitness-outline',
     animalType: 'horse',
   },
   {
-    id: 'horse-p3',
-    name: 'Competition Peak Formula',
+    id: 'horse-pun-2',
+    name: 'Rice Bran',
     dietType: 'performance',
-    calories: 3600,
-    ingredients: 'Steam-crimped oats, Corn oil, Electrolytes, B-complex vitamins',
-    nutrition: 'Protein 13% • Fat 9% • Quick energy • Recovery support',
-    feedingTime: 'Scheduled around training',
-    icon: 'trophy-outline',
+    calories: 2400,
+    ingredients: 'Rice bran, Fresh water, Mineral supplement',
+    nutrition: 'Calories: 2400 kcal/kg • Fiber: 18.0% • Protein: 17.0% • Carbs: 50% • Fat: 1.5%',
+    feedingTime: 'Year-round',
+    icon: 'flash-outline',
+    animalType: 'horse',
+  },
+  {
+    id: 'horse-pun-3',
+    name: 'Lucerne Hay',
+    dietType: 'weightGain',
+    calories: 1900,
+    ingredients: 'Lucerne hay, Fresh water, Salt block',
+    nutrition: 'Calories: 1900 kcal/kg • Fiber: 28% • Protein: 16% • Carbs: 20% • Fat: 2.5%',
+    feedingTime: 'Year-round',
+    icon: 'trending-up-outline',
+    animalType: 'horse',
+  },
+  // GUJARAT
+  {
+    id: 'horse-guj-1',
+    name: 'Bajra Grain',
+    dietType: 'performance',
+    calories: 3200,
+    ingredients: 'Bajra grain, Fresh water, Mineral supplement',
+    nutrition: 'Calories: 3200 kcal/kg • Fiber: 3.2% • Protein: 12.5% • Carbs: 67.1% • Fat: 4.8%',
+    feedingTime: 'Kharif season',
+    icon: 'flash-outline',
+    animalType: 'horse',
+  },
+  {
+    id: 'horse-guj-2',
+    name: 'Groundnut Cake',
+    dietType: 'weightGain',
+    calories: 2200,
+    ingredients: 'Groundnut cake, Fresh water, Salt supplement',
+    nutrition: 'Calories: 2200 kcal/kg • Fiber: 6% • Protein: 45% • Carbs: 10% • Fat: 6%',
+    feedingTime: 'Year-round',
+    icon: 'trending-up-outline',
+    animalType: 'horse',
+  },
+  {
+    id: 'horse-guj-3',
+    name: 'Guar Fodder',
+    dietType: 'maintenance',
+    calories: 1800,
+    ingredients: 'Guar fodder, Fresh water, Mineral block',
+    nutrition: 'Calories: 1800 kcal/kg • Fiber: 32% • Protein: 8% • Carbs: 50% • Fat: 2.5%',
+    feedingTime: 'Monsoon season',
+    icon: 'leaf-outline',
+    animalType: 'horse',
+  },
+  // MAHARASHTRA
+  {
+    id: 'horse-mah-1',
+    name: 'Jowar Grain',
+    dietType: 'performance',
+    calories: 3200,
+    ingredients: 'Jowar grain, Fresh water, Mineral supplement',
+    nutrition: 'Calories: 3200 kcal/kg • Fiber: 3% • Protein: 10% • Carbs: 75% • Fat: 3%',
+    feedingTime: 'Kharif season',
+    icon: 'flash-outline',
+    animalType: 'horse',
+  },
+  {
+    id: 'horse-mah-2',
+    name: 'Soybean Cake',
+    dietType: 'weightGain',
+    calories: 2400,
+    ingredients: 'Soybean cake, Fresh water, Salt supplement',
+    nutrition: 'Calories: 2400 kcal/kg • Fiber: 7% • Protein: 46% • Carbs: 30% • Fat: 6%',
+    feedingTime: 'Year-round',
+    icon: 'trending-up-outline',
+    animalType: 'horse',
+  },
+  {
+    id: 'horse-mah-3',
+    name: 'Sugarcane Tops',
+    dietType: 'weightLoss',
+    calories: 800,
+    ingredients: 'Sugarcane tops, Fresh water, Vitamin supplement',
+    nutrition: 'Calories: 800 kcal/kg • Fiber: 25% • Protein: 3% • Carbs: 10% • Fat: 0.5%',
+    feedingTime: 'Post-harvest season',
+    icon: 'fitness-outline',
     animalType: 'horse',
   },
 ];
@@ -343,6 +363,7 @@ const getDietIcon = (dietType: string): keyof typeof Ionicons.glyphMap => {
 };
 
 export default function MealsScreen() {
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { selectedCattle: contextSelectedCattle } = useSelectedCattle();
   const { data: herd } = useUserCollection<CattleProfile>('cattle');
@@ -549,7 +570,7 @@ export default function MealsScreen() {
   }, [selectedCattlePlans]);
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       {/* Tab Bar */}
       <View style={styles.tabBar}>
         <Pressable
@@ -580,7 +601,10 @@ export default function MealsScreen() {
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        contentContainerStyle={styles.container} 
+        showsVerticalScrollIndicator={false}
+      >
         {/* MEAL PLAN TAB */}
         {activeTab === 'mealPlan' && (
           <>
@@ -732,12 +756,7 @@ export default function MealsScreen() {
                   </View>
                   <Tag label={`${horseRecipes.length}`} tone="warning" />
                 </View>
-                <ScrollView 
-                  horizontal 
-                  showsHorizontalScrollIndicator={false} 
-                  style={styles.recipeScroll}
-                  contentContainerStyle={styles.recipeScrollContent}
-                >
+                <View style={styles.recipeGrid}>
                   {horseRecipes.map((recipe) => (
                     <Pressable key={recipe.id} style={[styles.recipeCard, styles.horseRecipeCard]} onPress={() => openRecipe(recipe)}>
                       <View style={[styles.recipeIconWrap, styles.horseIconWrap]}>
@@ -752,7 +771,7 @@ export default function MealsScreen() {
                       </View>
                     </Pressable>
                   ))}
-                </ScrollView>
+                </View>
               </View>
             )}
           </>
@@ -762,7 +781,11 @@ export default function MealsScreen() {
       {/* Create Meal Plan Modal */}
       <Modal visible={showPlannerModal} animationType="slide" onRequestClose={() => setShowPlannerModal(false)}>
         <SafeAreaView style={styles.modalSafe}>
-          <ScrollView contentContainerStyle={styles.modalContent}>
+          <ScrollView 
+            contentContainerStyle={styles.modalContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
             <View style={styles.modalHeader}>
               <Pressable style={styles.closeButton} onPress={() => setShowPlannerModal(false)}>
                 <Ionicons name="close" size={24} color="#64748B" />
@@ -819,6 +842,7 @@ export default function MealsScreen() {
                       selectedDietFocus === option.value && { borderColor: option.color, backgroundColor: `${option.color}15` },
                     ]}
                     onPress={() => setSelectedDietFocus(option.value)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
                     <Ionicons name={option.icon} size={24} color={selectedDietFocus === option.value ? option.color : '#64748B'} />
                     <Text style={[
@@ -839,6 +863,7 @@ export default function MealsScreen() {
                     key={days}
                     style={[styles.dayOption, selectedDays === days && styles.dayOptionSelected]}
                     onPress={() => setSelectedDays(days)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
                     <Text style={[styles.dayOptionText, selectedDays === days && styles.dayOptionTextSelected]}>
                       {days}
@@ -855,6 +880,7 @@ export default function MealsScreen() {
               style={[styles.generateButton, saving && { opacity: 0.6 }]} 
               onPress={generateMealPlan}
               disabled={saving}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               {saving ? (
                 <ActivityIndicator color="#fff" />
@@ -980,63 +1006,88 @@ export default function MealsScreen() {
 
       {/* Recipe Detail Modal */}
       <Modal visible={showRecipeModal} animationType="slide" transparent onRequestClose={() => setShowRecipeModal(false)}>
-        <Pressable style={styles.recipeModalOverlay} onPress={() => setShowRecipeModal(false)}>
-          <Pressable style={styles.recipeModalContent} onPress={(e) => e.stopPropagation()}>
-            {selectedRecipe && (
-              <>
-                <View style={styles.recipeModalHeader}>
-                  <View style={[
-                    styles.recipeModalIcon,
-                    selectedRecipe.animalType === 'horse' && styles.horseModalIcon
-                  ]}>
-                    <Ionicons
-                      name={selectedRecipe.icon}
-                      size={36}
-                      color={selectedRecipe.animalType === 'horse' ? '#D97706' : '#0a7ea4'}
-                    />
+        <SafeAreaView style={styles.recipeModalSafe}>
+          <Pressable style={styles.recipeModalOverlay} onPress={() => setShowRecipeModal(false)}>
+            <Pressable style={styles.recipeModalContent} onPress={(e) => e.stopPropagation()}>
+              {selectedRecipe && (
+                <ScrollView 
+                  contentContainerStyle={styles.recipeModalScrollContent}
+                  showsVerticalScrollIndicator={true}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  <View style={styles.recipeModalHeader}>
+                    <View style={[
+                      styles.recipeModalIcon,
+                      selectedRecipe.animalType === 'horse' && styles.horseModalIcon
+                    ]}>
+                      <Ionicons
+                        name={selectedRecipe.icon}
+                        size={36}
+                        color={selectedRecipe.animalType === 'horse' ? '#D97706' : '#0a7ea4'}
+                      />
+                    </View>
+                    <Text style={styles.recipeModalTitle}>{selectedRecipe.name}</Text>
+                    <Pressable style={styles.closeRecipeButton} onPress={() => setShowRecipeModal(false)}>
+                      <Ionicons name="close" size={24} color="#64748B" />
+                    </Pressable>
                   </View>
-                  <Text style={styles.recipeModalTitle}>{selectedRecipe.name}</Text>
-                  <Pressable style={styles.closeRecipeButton} onPress={() => setShowRecipeModal(false)}>
-                    <Ionicons name="close" size={24} color="#64748B" />
-                  </Pressable>
-                </View>
 
-                <View style={styles.recipeStats}>
-                  <View style={styles.recipeStat}>
-                    <Ionicons name="flame-outline" size={20} color="#EF4444" />
-                    <Text style={styles.recipeStatValue}>{selectedRecipe.calories}</Text>
-                    <Text style={styles.recipeStatLabel}>kcal</Text>
+                  <View style={styles.recipeStats}>
+                    <View style={styles.recipeStat}>
+                      <Ionicons name="flame-outline" size={20} color="#EF4444" />
+                      <Text style={styles.recipeStatValue}>{selectedRecipe.calories}</Text>
+                      <Text style={styles.recipeStatLabel}>kcal</Text>
+                    </View>
+                    <View style={styles.recipeStat}>
+                      <Ionicons name="time-outline" size={20} color="#3B82F6" />
+                      <Text style={styles.recipeStatValue}>{selectedRecipe.feedingTime}</Text>
+                    </View>
                   </View>
-                  <View style={styles.recipeStat}>
-                    <Ionicons name="time-outline" size={20} color="#3B82F6" />
-                    <Text style={styles.recipeStatValue}>{selectedRecipe.feedingTime}</Text>
-                  </View>
-                </View>
 
-                <View style={styles.recipeDetailSection}>
-                  <View style={styles.recipeDetailHeader}>
-                    <Ionicons name="list-outline" size={18} color="#64748B" />
-                    <Text style={styles.recipeDetailLabel}>Ingredients</Text>
+                  <View style={styles.recipeDetailSection}>
+                    <View style={styles.recipeDetailHeader}>
+                      <Ionicons name="list-outline" size={18} color="#64748B" />
+                      <Text style={styles.recipeDetailLabel}>Ingredients</Text>
+                    </View>
+                    <Text style={styles.recipeDetailText}>{selectedRecipe.ingredients}</Text>
                   </View>
-                  <Text style={styles.recipeDetailText}>{selectedRecipe.ingredients}</Text>
-                </View>
 
-                <View style={styles.recipeDetailSection}>
-                  <View style={styles.recipeDetailHeader}>
-                    <Ionicons name="nutrition-outline" size={18} color="#64748B" />
-                    <Text style={styles.recipeDetailLabel}>Nutrition</Text>
+                  <View style={styles.recipeDetailSection}>
+                    <View style={styles.recipeDetailHeader}>
+                      <Ionicons name="nutrition-outline" size={18} color="#64748B" />
+                      <Text style={styles.recipeDetailLabel}>Nutrition</Text>
+                    </View>
+                    <Text style={styles.recipeDetailText}>{selectedRecipe.nutrition}</Text>
                   </View>
-                  <Text style={styles.recipeDetailText}>{selectedRecipe.nutrition}</Text>
-                </View>
 
-                <View style={styles.recipeDietTypeSection}>
-                  <Tag label={selectedRecipe.dietType} tone="success" />
-                  <Tag label={selectedRecipe.animalType === 'cow' ? 'For Cows' : 'For Horses'} tone={selectedRecipe.animalType === 'cow' ? 'primary' : 'warning'} />
-                </View>
-              </>
-            )}
+                  {selectedRecipe.animalType === 'horse' && (
+                    <View style={styles.nutritionalSummarySection}>
+                      <View style={styles.nutritionalSummaryHeader}>
+                        <Ionicons name="information-circle-outline" size={18} color="#D97706" />
+                        <Text style={styles.nutritionalSummaryTitle}>Summary of Nutritional Needs</Text>
+                      </View>
+                      <Text style={styles.nutritionalSummaryText}>
+                        For Indian horses (350-450 kg) with moderate work levels, typical daily nutritional requirements are as follows:
+                      </Text>
+                      <View style={styles.nutritionalSummaryList}>
+                        <Text style={styles.nutritionalSummaryItem}>• Calories: 16,000-22,000 kcal/day</Text>
+                        <Text style={styles.nutritionalSummaryItem}>• Fiber: 25-30% of diet (5-7 kg)</Text>
+                        <Text style={styles.nutritionalSummaryItem}>• Protein: 8-12% of diet (1-1.5 kg)</Text>
+                        <Text style={styles.nutritionalSummaryItem}>• Carbohydrates: 50-60% of diet</Text>
+                        <Text style={styles.nutritionalSummaryItem}>• Fat: 2-5% of diet (energy-dense feeds like oilseed cakes may help)</Text>
+                      </View>
+                    </View>
+                  )}
+
+                  <View style={styles.recipeDietTypeSection}>
+                    <Tag label={selectedRecipe.dietType} tone="success" />
+                    <Tag label={selectedRecipe.animalType === 'cow' ? 'For Cows' : 'For Horses'} tone={selectedRecipe.animalType === 'cow' ? 'primary' : 'warning'} />
+                  </View>
+                </ScrollView>
+              )}
+            </Pressable>
           </Pressable>
-        </Pressable>
+        </SafeAreaView>
       </Modal>
     </SafeAreaView>
   );
@@ -1094,6 +1145,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 3,
+    ...(Platform.OS === 'web' && {
+      boxShadow: createBoxShadow('#0a7ea4', { width: 0, height: 4 }, 0.08, 12),
+    }),
   },
   createIconWrap: {
     width: 56,
@@ -1172,6 +1226,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 2,
+    ...(Platform.OS === 'web' && {
+      boxShadow: createBoxShadow('#000', { width: 0, height: 2 }, 0.04, 8),
+    }),
   },
   planCardHeader: {
     flexDirection: 'row',
@@ -1257,20 +1314,20 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#0a7ea4',
   },
-  recipeScroll: {
-    marginHorizontal: -20,
-  },
-  recipeScrollContent: {
-    paddingHorizontal: 20,
+  recipeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginTop: 8,
   },
   recipeCard: {
-    width: 150,
+    width: '48%',
     backgroundColor: '#fff',
     borderRadius: 18,
     padding: 14,
-    marginRight: 12,
     borderWidth: 1,
     borderColor: '#E0F2FE',
+    minWidth: 150,
   },
   horseRecipeCard: {
     borderColor: '#FEF3C7',
@@ -1612,6 +1669,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  recipeModalSafe: {
+    flex: 1,
+  },
   recipeModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -1621,6 +1681,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
+    maxHeight: '90%',
+  },
+  recipeModalScrollContent: {
     padding: 24,
     paddingBottom: 40,
   },
@@ -1705,5 +1768,38 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 10,
     marginTop: 12,
+  },
+  nutritionalSummarySection: {
+    backgroundColor: '#FEF3C7',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#FCD34D',
+  },
+  nutritionalSummaryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  nutritionalSummaryTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#92400E',
+  },
+  nutritionalSummaryText: {
+    fontSize: 14,
+    color: '#78350F',
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  nutritionalSummaryList: {
+    gap: 6,
+  },
+  nutritionalSummaryItem: {
+    fontSize: 13,
+    color: '#78350F',
+    lineHeight: 20,
   },
 });

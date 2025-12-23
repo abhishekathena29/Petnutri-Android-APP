@@ -64,7 +64,6 @@ export default function TabLayout() {
           tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
           headerShown: true,
           headerTitleAlign: 'left',
-          headerStatusBarHeight: 8,
           headerStyle: styles.header,
           headerTitleStyle: styles.headerTitle,
           headerRight: () => (
@@ -161,12 +160,16 @@ export default function TabLayout() {
                     <View style={styles.statItem}>
                       <Ionicons name="scale-outline" size={20} color="#0a7ea4" />
                       <Text style={styles.statLabel}>Weight</Text>
-                      <Text style={styles.statValue}>{selectedCattle.weightKg || '—'} kg</Text>
+                      <Text style={styles.statValue}>
+                        {selectedCattle.weightValue ? `${selectedCattle.weightValue} ${selectedCattle.weightUnit || 'kg'}` : '—'}
+                      </Text>
                     </View>
                     <View style={styles.statItem}>
                       <Ionicons name="resize-outline" size={20} color="#0a7ea4" />
                       <Text style={styles.statLabel}>Height</Text>
-                      <Text style={styles.statValue}>{selectedCattle.heightCm || '—'} cm</Text>
+                      <Text style={styles.statValue}>
+                        {selectedCattle.heightValue ? `${selectedCattle.heightValue} ${selectedCattle.heightUnit || 'cm'}` : '—'}
+                      </Text>
                     </View>
                     <View style={styles.statItem}>
                       <Ionicons name="calendar-outline" size={20} color="#0a7ea4" />
@@ -174,21 +177,31 @@ export default function TabLayout() {
                       <Text style={styles.statValue}>{selectedCattle.ageYears || '—'} yrs</Text>
                     </View>
                     <View style={styles.statItem}>
-                      <Ionicons name="heart-outline" size={20} color="#0a7ea4" />
-                      <Text style={styles.statLabel}>Health</Text>
-                      <Text style={styles.statValue}>{selectedCattle.healthStatus}</Text>
+                      <Ionicons name={selectedCattle.sex === 'male' ? 'male' : 'female'} size={20} color="#0a7ea4" />
+                      <Text style={styles.statLabel}>Gender</Text>
+                      <Text style={styles.statValue}>{selectedCattle.sex === 'male' ? '♂ Male' : '♀ Female'}</Text>
                     </View>
                   </View>
-                  {selectedCattle.dietGoal && (
+                  {selectedCattle.sex === 'female' && selectedCattle.femaleStatus && (
                     <View style={styles.profileInfo}>
-                      <Text style={styles.infoLabel}>Diet Goal</Text>
-                      <Text style={styles.infoValue}>{selectedCattle.dietGoal}</Text>
+                      <Text style={styles.infoLabel}>Female Status</Text>
+                      <Text style={styles.infoValue}>
+                        {selectedCattle.femaleStatus === 'pregnant' ? '🤰 Pregnant' : selectedCattle.femaleStatus === 'lactating' ? '🥛 Lactating' : 'Not Pregnant'}
+                      </Text>
                     </View>
                   )}
-                  {selectedCattle.notes && (
+                  {selectedCattle.activityLevel && (
                     <View style={styles.profileInfo}>
-                      <Text style={styles.infoLabel}>Notes</Text>
-                      <Text style={styles.infoValue}>{selectedCattle.notes}</Text>
+                      <Text style={styles.infoLabel}>Activity Level</Text>
+                      <Text style={styles.infoValue}>
+                        {selectedCattle.activityLevel === 'maintenance' ? 'Maintenance' : selectedCattle.activityLevel === 'lightWork' ? 'Light Work' : selectedCattle.activityLevel === 'moderateWork' ? 'Moderate Work' : 'Heavy Work'}
+                      </Text>
+                    </View>
+                  )}
+                  {selectedCattle.climateRegion && (
+                    <View style={styles.profileInfo}>
+                      <Text style={styles.infoLabel}>Climate Region</Text>
+                      <Text style={styles.infoValue}>{selectedCattle.climateRegion}</Text>
                     </View>
                   )}
                 </ScrollView>
@@ -385,3 +398,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 });
+

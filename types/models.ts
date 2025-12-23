@@ -74,6 +74,10 @@ export interface ProgressLog {
   exerciseMinutes: number;
   observations: string;
   observationRating?: number;
+  mealTake?: boolean;
+  exercise?: 'normal' | 'moderate' | 'hard';
+  water?: number; // liters
+  activity?: 'normal' | 'moderate' | 'hard';
   createdAt?: Date;
 }
 
