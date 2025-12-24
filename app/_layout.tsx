@@ -2,7 +2,7 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import 'react-native-reanimated';
 
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
@@ -53,17 +53,69 @@ function RootLayoutNav() {
   return <Slot />;
 }
 
+function ErrorBoundary({ children }: { children: React.ReactNode }) {
+  const [hasError, setHasError] = React.useState(false);
+  const [error, setError] = React.useState<Error | null>(null);
+
+  React.useEffect(() => {
+    const errorHandler = (error: Error) => {
+      console.error('App error:', error);
+      setError(error);
+      setHasError(true);
+    };
+
+    // Catch unhandled errors
+    const originalError = console.error;
+    console.error = (...args) => {
+      originalError(...args);
+      if (args[0] instanceof Error) {
+        errorHandler(args[0]);
+      }
+    };
+
+    return () => {
+      console.error = originalError;
+    };
+  }, []);
+
+  if (hasError) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFC', padding: 20 }}>
+        <Text style={{ fontSize: 18, fontWeight: '700', color: '#DC2626', marginBottom: 12, textAlign: 'center' }}>
+          App Error
+        </Text>
+        <Text style={{ fontSize: 14, color: '#64748B', textAlign: 'center', marginBottom: 20 }}>
+          {error?.message || 'An unexpected error occurred'}
+        </Text>
+        <Pressable
+          onPress={() => {
+            setHasError(false);
+            setError(null);
+          }}
+          style={{ backgroundColor: '#0a7ea4', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 }}
+        >
+          <Text style={{ color: '#fff', fontWeight: '600' }}>Retry</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  return <>{children}</>;
+}
+
 export default function RootLayout() {
   const colorScheme = useColorScheme();
 
   return (
-    <AuthProvider>
-      <SelectedCattleProvider>
-        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <RootLayoutNav />
-          <StatusBar style="default" translucent backgroundColor="transparent" />
-        </ThemeProvider>
-      </SelectedCattleProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <SelectedCattleProvider>
+          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+            <RootLayoutNav />
+            <StatusBar style="default" translucent backgroundColor="transparent" />
+          </ThemeProvider>
+        </SelectedCattleProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }

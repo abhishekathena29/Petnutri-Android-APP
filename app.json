@@ -12,6 +12,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.petnutri.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/icon.png"
@@ -22,8 +23,7 @@
         "backgroundColor": "transparent",
         "translucent": true
       },
-      "predictiveBackGestureEnabled": false,
-      "package": "com.petnutri.app"
+      "predictiveBackGestureEnabled": false
     },
     "web": {
       "output": "static",
