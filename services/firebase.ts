@@ -1,15 +1,28 @@
 import { getApp, getApps, initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, initializeFirestore, persistentLocalCache } from 'firebase/firestore';
+import { getFirestore } from 'firebase/firestore';
 
+// Access environment variables - Expo replaces these at build time
+// Use ! to fail-fast if env vars are missing (better than empty string)
 const firebaseConfig = {
-  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY ?? '',
-  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN ?? '',
-  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID ?? '',
-  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET ?? '',
-  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?? '',
-  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID ?? '',
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY!,
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN!,
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID!,
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET!,
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID!,
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID!,
 };
+
+// Debug: Log config (without sensitive data) to help diagnose
+if (__DEV__) {
+  console.log('Firebase Config Check:', {
+    hasApiKey: !!firebaseConfig.apiKey,
+    hasAuthDomain: !!firebaseConfig.authDomain,
+    hasProjectId: !!firebaseConfig.projectId,
+    apiKeyLength: firebaseConfig.apiKey?.length || 0,
+    projectId: firebaseConfig.projectId,
+  });
+}
 
 // Validate Firebase config
 const isFirebaseConfigValid = () => {
@@ -47,9 +60,30 @@ const initializeFirebase = () => {
     if (!firebaseConfig.appId) missingVars.push('EXPO_PUBLIC_FIREBASE_APP_ID');
     
     console.error('Firebase configuration is missing. Missing variables:', missingVars.join(', '));
+    console.error('Config check:', {
+      apiKey: firebaseConfig.apiKey ? `${firebaseConfig.apiKey.substring(0, 10)}...` : 'MISSING',
+      authDomain: firebaseConfig.authDomain || 'MISSING',
+      projectId: firebaseConfig.projectId || 'MISSING',
+    });
     console.error('Please set EXPO_PUBLIC_FIREBASE_* environment variables in EAS Build secrets.');
     throw new Error(`Firebase configuration is incomplete. Missing: ${missingVars.join(', ')}`);
   }
+  
+  // Validate API key format (should start with AIza)
+  if (firebaseConfig.apiKey && !firebaseConfig.apiKey.startsWith('AIza')) {
+    console.error('Firebase API key format appears invalid. Should start with "AIza"');
+    console.error('API key received:', firebaseConfig.apiKey.substring(0, 20) + '...');
+  }
+
+  // Debug: Log full config (for troubleshooting - remove in production)
+  console.log('Firebase Config being used:', {
+    apiKey: firebaseConfig.apiKey ? `${firebaseConfig.apiKey.substring(0, 10)}...${firebaseConfig.apiKey.substring(firebaseConfig.apiKey.length - 5)}` : 'MISSING',
+    authDomain: firebaseConfig.authDomain,
+    projectId: firebaseConfig.projectId,
+    storageBucket: firebaseConfig.storageBucket,
+    messagingSenderId: firebaseConfig.messagingSenderId,
+    appId: firebaseConfig.appId,
+  });
 
   const apps = getApps();
   app = apps.length === 0 ? initializeApp(firebaseConfig) : getApp();
@@ -59,11 +93,8 @@ const initializeFirebase = () => {
   // No need for getReactNativePersistence in Expo environment
   auth = getAuth(app);
 
-  db = shouldInitNativeInstances
-    ? initializeFirestore(app, {
-        localCache: persistentLocalCache(),
-      })
-    : getFirestore(app);
+  // Use getFirestore() - Expo + Firebase v9 handles persistence safely for React Native
+  db = getFirestore(app);
     
   initialized = true;
   console.log('Firebase initialized successfully');
