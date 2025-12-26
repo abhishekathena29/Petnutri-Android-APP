@@ -215,47 +215,53 @@ export default function PregnancyScreen() {
     return `${monthArray[0]} to ${monthArray[monthArray.length - 1]}`;
   };
 
-  // Calculate expected months based on pregnancy date (from dueDate - 9 months)
-  const calculateExpectedMonths = (dueDateStr: string) => {
+  // Calculate expected delivery months based on pregnancy date (dueDateStr is actually the pregnancy date)
+  // For cows: 9 months from pregnancy date
+  // For horses: 12 months from pregnancy date
+  const calculateExpectedMonths = (dueDateStr: string, cattleType: 'cow' | 'horse' = 'cow') => {
     if (!dueDateStr) return null;
     
+    const pregnancyMonths = cattleType === 'cow' ? 9 : 12;
+    
     try {
-      const dueDate = new Date(dueDateStr);
-      // Calculate pregnancy date (due date - 9 months)
-      const pregnancyDate = new Date(dueDate);
-      pregnancyDate.setMonth(pregnancyDate.getMonth() - 9);
+      // Parse the date string properly to avoid timezone issues
+      // dueDateStr is actually the pregnancy date (when they got pregnant)
+      // Handle YYYY-MM-DD format
+      const dateStr = dueDateStr.split('T')[0]; // Remove time portion if present
+      const [year, month, day] = dateStr.split('-').map(Number);
+      const pregnancyDate = new Date(year, month - 1, day); // month is 0-indexed
       
-      const day = pregnancyDate.getDate();
-      const expectedDate = new Date(pregnancyDate);
-      expectedDate.setMonth(expectedDate.getMonth() + 9);
+      // Calculate expected delivery date (pregnancy date + pregnancy months)
+      // For cows: 9 months from pregnancy date
+      // For horses: 12 months from pregnancy date
+      const expectedDeliveryDate = new Date(pregnancyDate);
+      expectedDeliveryDate.setMonth(expectedDeliveryDate.getMonth() + pregnancyMonths);
       
-      const expectedMonth = expectedDate.getMonth();
-      const expectedYear = expectedDate.getFullYear();
+      // Calculate 15 days before and after the expected delivery date
+      const dayBefore = new Date(expectedDeliveryDate);
+      dayBefore.setDate(dayBefore.getDate() - 15);
+      
+      const dayAfter = new Date(expectedDeliveryDate);
+      dayAfter.setDate(dayAfter.getDate() + 15);
       
       const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       
-      if (day >= 1 && day <= 15) {
-        const firstMonth = monthNames[expectedMonth];
-        const secondMonthIndex = (expectedMonth + 1) % 12;
-        const secondMonth = monthNames[secondMonthIndex];
-        const secondYear = secondMonthIndex === 0 ? expectedYear + 1 : expectedYear;
-        
-        return {
-          months: [firstMonth, secondMonth],
-          monthIndices: [expectedMonth, secondMonthIndex],
-          years: [expectedYear, secondYear],
-          display: `${firstMonth} ${expectedYear} to ${secondMonth} ${secondYear}`
-        };
-      } else {
-        const decIndex = 11; // December
-        const janIndex = 0; // January
-        return {
-          months: ['Dec', 'Jan'],
-          monthIndices: [decIndex, janIndex],
-          years: [expectedYear, expectedYear + 1],
-          display: `Dec ${expectedYear} to Jan ${expectedYear + 1}`
-        };
-      }
+      // Get the months for the range (15 days before to 15 days after)
+      const beforeMonth = dayBefore.getMonth();
+      const beforeYear = dayBefore.getFullYear();
+      const afterMonth = dayAfter.getMonth();
+      const afterYear = dayAfter.getFullYear();
+      
+      // Always show the actual months that the range spans (15 days before to 15 days after)
+      const firstMonth = monthNames[beforeMonth];
+      const secondMonth = monthNames[afterMonth];
+      
+      return {
+        months: [firstMonth, secondMonth],
+        monthIndices: [beforeMonth, afterMonth],
+        years: [beforeYear, afterYear],
+        display: `${firstMonth} ${beforeYear} to ${secondMonth} ${afterYear}`
+      };
     } catch {
       return null;
     }
@@ -267,33 +273,36 @@ export default function PregnancyScreen() {
     return blockedMonthStr.split(',').map(m => m.trim());
   };
 
-  // Calculate blocked months based on dueDate and trimester
-  const calculateBlockedMonthsFromTrimester = (dueDateStr: string, trimester: 'early' | 'mid' | 'late'): string[] => {
+  // Calculate blocked months based on pregnancy date and trimester
+  // dueDateStr is actually the pregnancy date (when they got pregnant)
+  // For cows (9 months): Early: 0-3, Mid: 3-6, Late: 6-9
+  // For horses (12 months): Early: 0-4, Mid: 4-8, Late: 8-12
+  const calculateBlockedMonthsFromTrimester = (dueDateStr: string, trimester: 'early' | 'mid' | 'late', cattleType: 'cow' | 'horse' = 'cow'): string[] => {
     if (!dueDateStr) return [];
     
     try {
-      const dueDate = new Date(dueDateStr);
-      // Calculate pregnancy date (due date - 9 months)
-      const pregnancyDate = new Date(dueDate);
-      pregnancyDate.setMonth(pregnancyDate.getMonth() - 9);
+      // dueDateStr is actually the pregnancy date
+      const pregnancyDate = new Date(dueDateStr);
       
-      // Determine month range based on trimester
-      // Early: months 0-3, Mid: months 3-6, Late: months 6-9
+      // Determine month range based on trimester and cattle type
+      // The pregnancy month itself counts as month 1
+      // For cows (9 months): Early: months 1-3 (0-2 offset), Mid: months 4-6 (3-5 offset), Late: months 7-9 (6-8 offset)
+      // For horses (12 months): Early: months 1-4 (0-3 offset), Mid: months 5-8 (4-7 offset), Late: months 9-12 (8-11 offset)
       let startMonthOffset = 0;
-      let endMonthOffset = 3;
+      let endMonthOffset = cattleType === 'cow' ? 3 : 4; // End is exclusive, so 3 means months 0,1,2 (which are months 1,2,3)
       
       if (trimester === 'mid') {
-        startMonthOffset = 3;
-        endMonthOffset = 6;
+        startMonthOffset = cattleType === 'cow' ? 3 : 4;
+        endMonthOffset = cattleType === 'cow' ? 6 : 8;
       } else if (trimester === 'late') {
-        startMonthOffset = 6;
-        endMonthOffset = 9;
+        startMonthOffset = cattleType === 'cow' ? 6 : 8;
+        endMonthOffset = cattleType === 'cow' ? 9 : 12;
       }
       
       const blockedMonths: string[] = [];
       const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       
-      // Calculate blocked months
+      // Calculate blocked months starting from pregnancy date (month 1)
       for (let i = startMonthOffset; i < endMonthOffset; i++) {
         const monthDate = new Date(pregnancyDate);
         monthDate.setMonth(monthDate.getMonth() + i);
@@ -313,21 +322,28 @@ export default function PregnancyScreen() {
   const getTrimesterDateRange = (mainPlan: PregnancyPlan) => {
     if (!mainPlan.dueDate) return { startMonth: 0, endMonth: 11, startYear: new Date().getFullYear(), endYear: new Date().getFullYear() + 1 };
     
+    // Get cattle type from herd
+    const cattleMeta = herd.find(c => c.id === mainPlan.cattleId);
+    const cattleType = cattleMeta?.type || 'cow';
+    const pregnancyMonths = cattleType === 'cow' ? 9 : 12;
+    
     try {
-      const dueDate = new Date(mainPlan.dueDate);
-      const pregnancyDate = new Date(dueDate);
-      pregnancyDate.setMonth(pregnancyDate.getMonth() - 9);
+      // dueDate is actually the pregnancy date
+      const pregnancyDate = new Date(mainPlan.dueDate);
       
       const trimester = mainPlan.trimester || 'early';
+      // The pregnancy month itself counts as month 1
+      // For cows (9 months): Early: months 1-3 (0-2 offset), Mid: months 4-6 (3-5 offset), Late: months 7-9 (6-8 offset)
+      // For horses (12 months): Early: months 1-4 (0-3 offset), Mid: months 5-8 (4-7 offset), Late: months 9-12 (8-11 offset)
       let startMonthOffset = 0;
-      let endMonthOffset = 3;
+      let endMonthOffset = cattleType === 'cow' ? 3 : 4; // End is exclusive
       
       if (trimester === 'mid') {
-        startMonthOffset = 3;
-        endMonthOffset = 6;
+        startMonthOffset = cattleType === 'cow' ? 3 : 4;
+        endMonthOffset = cattleType === 'cow' ? 6 : 8;
       } else if (trimester === 'late') {
-        startMonthOffset = 6;
-        endMonthOffset = 9;
+        startMonthOffset = cattleType === 'cow' ? 6 : 8;
+        endMonthOffset = pregnancyMonths;
       }
       
       const startDate = new Date(pregnancyDate);
@@ -465,8 +481,12 @@ export default function PregnancyScreen() {
         return;
       }
       
+      // Get cattle type from herd
+      const cattleMeta = herd.find(c => c.id === planToUpdate.cattleId);
+      const cattleType = cattleMeta?.type || 'cow';
+      
       // Calculate new blocked months based on new trimester
-      const newBlockedMonths = calculateBlockedMonthsFromTrimester(planToUpdate.dueDate, editTrimesterValue);
+      const newBlockedMonths = calculateBlockedMonthsFromTrimester(planToUpdate.dueDate, editTrimesterValue, cattleType);
       
       // Update both trimester and blocked months
       await updateUserDocument(user.uid, 'pregnancy', editingPlanId, {
@@ -583,167 +603,350 @@ export default function PregnancyScreen() {
                 const mainPlan = group.entries.find(e => !e.todo && !e.calendarDate) || group.entries[0];
                 const todos = group.entries.filter(e => e.todo && e.calendarDate);
                 
-                const expectedMonths = mainPlan.dueDate ? calculateExpectedMonths(mainPlan.dueDate) : null;
+                // Get cattle type from herd
+                const cattleMeta = herd.find(c => c.id === group.cattleId);
+                const cattleType = cattleMeta?.type || 'cow';
+                const expectedMonths = mainPlan.dueDate ? calculateExpectedMonths(mainPlan.dueDate, cattleType) : null;
                 const blockedMonthsArray = getBlockedMonthsArray(mainPlan.blockedMonth || '');
                 const isCompleted = mainPlan.completed === true;
                 const isExpanded = mainPlan.id ? expandedCards.has(mainPlan.id) : false;
                 
                 return (
                   <View key={mainPlan.id || group.cattleId} style={styles.historyCardContainer}>
-                    {/* Compact History Card - Always Visible */}
-                    <Pressable 
-                      style={[styles.historyCard, isCompleted && styles.historyCardCompleted]}
-                      onPress={() => mainPlan.id && toggleCardExpansion(mainPlan.id)}
-                    >
-                      <View style={styles.historyCardHeader}>
-                        <View style={styles.historyCardLeft}>
-                          <View style={styles.historyCardIconContainer}>
-                            <Ionicons 
-                              name={isCompleted ? "checkmark-circle" : "time"} 
-                              size={24} 
-                              color={isCompleted ? "#10B981" : "#0a7ea4"} 
-                            />
-                          </View>
-                          <View style={styles.historyCardInfo}>
-                            <View style={styles.historyCardTitleRow}>
-                              <Text style={styles.historyCardTitle}>{group.cattleName}</Text>
-                              {isCompleted && (
-                                <View style={styles.historyCompletedBadge}>
-                                  <Text style={styles.historyCompletedText}>Completed</Text>
-                                </View>
-                              )}
-                            </View>
-                            <Text style={styles.historyCardSubtitle}>
-                              {isCompleted ? 'Pregnancy History' : 'Active Pregnancy'}
-                            </Text>
-                            <View style={styles.historyCardMeta}>
-                              <View style={styles.historyMetaItem}>
-                                <Ionicons name="calendar-outline" size={14} color="#64748B" />
-                                <Text style={styles.historyMetaText}>
-                                  {expectedMonths ? expectedMonths.display : 'No date set'}
-                                </Text>
+                    {isCompleted ? (
+                      // Completed Pregnancy - Keep existing compact layout
+                      <>
+                        <Pressable 
+                          style={[styles.historyCard, styles.historyCardCompleted]}
+                          onPress={() => mainPlan.id && toggleCardExpansion(mainPlan.id)}
+                        >
+                          <View style={styles.historyCardHeader}>
+                            <View style={styles.historyCardLeft}>
+                              <View style={styles.historyCardIconContainer}>
+                                <Ionicons 
+                                  name="checkmark-circle" 
+                                  size={24} 
+                                  color="#10B981" 
+                                />
                               </View>
-                              <View style={styles.historyMetaItem}>
-                                <Ionicons name="time-outline" size={14} color="#64748B" />
-                                <Text style={styles.historyMetaText}>
-                                  {mainPlan.trimester || 'early'} trimester
-                                </Text>
-                              </View>
-                              {todos.length > 0 && (
-                                <View style={styles.historyMetaItem}>
-                                  <Ionicons name="list-outline" size={14} color="#64748B" />
-                                  <Text style={styles.historyMetaText}>
-                                    {todos.length} {todos.length === 1 ? 'task' : 'tasks'}
-                                  </Text>
+                              <View style={styles.historyCardInfo}>
+                                <View style={styles.historyCardTitleRow}>
+                                  <Text style={styles.historyCardTitle}>{group.cattleName}</Text>
+                                  <View style={styles.historyCompletedBadge}>
+                                    <Text style={styles.historyCompletedText}>Completed</Text>
+                                  </View>
                                 </View>
-                              )}
+                                <Text style={styles.historyCardSubtitle}>Pregnancy History</Text>
+                                <View style={styles.historyCardMeta}>
+                                  <View style={styles.historyMetaItem}>
+                                    <Ionicons name="calendar-outline" size={14} color="#64748B" />
+                                    <Text style={styles.historyMetaText}>
+                                      {expectedMonths ? expectedMonths.display : 'No date set'}
+                                    </Text>
+                                  </View>
+                                  <View style={styles.historyMetaItem}>
+                                    <Ionicons name="time-outline" size={14} color="#64748B" />
+                                    <Text style={styles.historyMetaText}>
+                                      {mainPlan.trimester || 'early'} trimester
+                                    </Text>
+                                  </View>
+                                  {todos.length > 0 && (
+                                    <View style={styles.historyMetaItem}>
+                                      <Ionicons name="list-outline" size={14} color="#64748B" />
+                                      <Text style={styles.historyMetaText}>
+                                        {todos.length} {todos.length === 1 ? 'task' : 'tasks'}
+                                      </Text>
+                                    </View>
+                                  )}
+                                </View>
+                              </View>
+                            </View>
+                            <View style={styles.historyCardActions}>
+                              <Ionicons 
+                                name={isExpanded ? "chevron-up" : "chevron-down"} 
+                                size={24} 
+                                color="#64748B" 
+                              />
                             </View>
                           </View>
-                        </View>
-                        <View style={styles.historyCardActions}>
-                          <Ionicons 
-                            name={isExpanded ? "chevron-up" : "chevron-down"} 
-                            size={24} 
-                            color="#64748B" 
-                          />
-                        </View>
-                      </View>
-                    </Pressable>
+                        </Pressable>
 
-                    {/* Expanded Details - Show when card is expanded */}
-                    {isExpanded && (
-                      <View style={styles.historyCardDetails}>
-                        {/* Expected Delivery */}
-                        {expectedMonths && (
-                          <View style={styles.detailSection}>
-                            <View style={styles.detailSectionHeader}>
-                              <Ionicons name="calendar" size={18} color="#0a7ea4" />
-                              <Text style={styles.detailSectionTitle}>Expected Delivery</Text>
+                        {/* Expanded Details - Show when card is expanded */}
+                        {isExpanded && (
+                          <View style={styles.historyCardDetails}>
+                            {/* Expected Delivery */}
+                            {expectedMonths && (
+                              <View style={styles.detailSection}>
+                                <View style={styles.detailSectionHeader}>
+                                  <Ionicons name="calendar" size={18} color="#0a7ea4" />
+                                  <Text style={styles.detailSectionTitle}>Expected Delivery</Text>
+                                </View>
+                                <Text style={styles.detailSectionValue}>{expectedMonths.display}</Text>
+                                <Text style={styles.detailSectionNote}>Estimate only</Text>
+                              </View>
+                            )}
+
+                            {/* Trimester */}
+                            <View style={styles.detailSection}>
+                              <View style={styles.detailSectionHeader}>
+                                <Ionicons name="time" size={18} color="#D97706" />
+                                <Text style={styles.detailSectionTitle}>Trimester</Text>
+                              </View>
+                              <Tag label={mainPlan.trimester || 'early'} tone="warning" />
                             </View>
-                            <Text style={styles.detailSectionValue}>{expectedMonths.display}</Text>
-                            <Text style={styles.detailSectionNote}>Estimate only</Text>
+
+                            {/* Blocked Months */}
+                            {blockedMonthsArray.length > 0 && (
+                              <View style={styles.detailSection}>
+                                <View style={styles.detailSectionHeader}>
+                                  <Ionicons name="lock-closed" size={18} color="#92400E" />
+                                  <View style={{ flex: 1 }}>
+                                    <Text style={styles.detailSectionTitle}>Blocked Months</Text>
+                                    <Text style={styles.detailSectionSubtitle}>
+                                      {(() => {
+                                        const trimester = mainPlan.trimester || 'early';
+                                        if (cattleType === 'cow') {
+                                          return trimester === 'early' 
+                                            ? 'Months 0-3 from pregnancy date' 
+                                            : trimester === 'mid' 
+                                            ? 'Months 3-6 from pregnancy date' 
+                                            : 'Months 6-9 from pregnancy date';
+                                        } else {
+                                          return trimester === 'early' 
+                                            ? 'Months 0-4 from pregnancy date' 
+                                            : trimester === 'mid' 
+                                            ? 'Months 4-8 from pregnancy date' 
+                                            : 'Months 8-12 from pregnancy date';
+                                        }
+                                      })()}
+                                    </Text>
+                                  </View>
+                                </View>
+                                <View style={styles.blockedMonthsRow}>
+                                  {blockedMonthsArray.map((month) => (
+                                    <View key={month} style={styles.blockedMonthChip}>
+                                      <Text style={styles.blockedMonthText}>{month}</Text>
+                                    </View>
+                                  ))}
+                                </View>
+                              </View>
+                            )}
+
+                            {/* To-Do List */}
+                            <View style={styles.detailSection}>
+                              <View style={styles.detailSectionHeader}>
+                                <Ionicons name="list" size={18} color="#D97706" />
+                                <Text style={styles.detailSectionTitle}>To-Do List</Text>
+                              </View>
+                              
+                              {todos.length === 0 ? (
+                                <View style={styles.emptyTodosInline}>
+                                  <Ionicons name="checkmark-circle-outline" size={32} color="#CBD5E1" />
+                                  <Text style={styles.emptyTodosInlineText}>No tasks yet</Text>
+                                </View>
+                              ) : (
+                                <View style={styles.todosListInline}>
+                                  {todos.map((entry, idx) => {
+                                    const todoCompleted = entry.completed || false;
+                                    return (
+                                      <View key={entry.id || idx} style={[styles.todoItemInline, todoCompleted && styles.todoItemInlineCompleted]}>
+                                        <Pressable
+                                          style={styles.todoCheckboxInline}
+                                          onPress={() => entry.id && handleToggleTodo(entry.id, todoCompleted)}
+                                        >
+                                          <View style={[styles.checkboxInline, todoCompleted && styles.checkboxInlineChecked]}>
+                                            {todoCompleted && <Ionicons name="checkmark" size={12} color="#fff" />}
+                                          </View>
+                                        </Pressable>
+                                        <View style={styles.todoContentInline}>
+                                          <View style={styles.todoHeaderInline}>
+                                            <View style={styles.todoDateInline}>
+                                              <Ionicons name="calendar-outline" size={12} color="#64748B" />
+                                              <Text style={styles.todoDateTextInline}>{formatDisplayDate(entry.calendarDate || '')}</Text>
+                                            </View>
+                                            <Pressable
+                                              style={styles.todoDeleteInline}
+                                              onPress={() => entry.id && handleDeleteTodo(entry.id)}
+                                              disabled={deletingTodo === entry.id}
+                                            >
+                                              {deletingTodo === entry.id ? (
+                                                <ActivityIndicator size="small" color="#EF4444" />
+                                              ) : (
+                                                <Ionicons name="trash-outline" size={14} color="#EF4444" />
+                                              )}
+                                            </Pressable>
+                                          </View>
+                                          <Text style={[styles.todoTextInline, todoCompleted && styles.todoTextInlineCompleted]}>
+                                            {entry.todo}
+                                          </Text>
+                                        </View>
+                                      </View>
+                                    );
+                                  })}
+                                </View>
+                              )}
+                            </View>
+
+                            {/* Action Buttons */}
+                            <View style={styles.detailActions}>
+                              <Pressable
+                                style={[styles.detailActionButton, styles.detailActionButtonDelete]}
+                                onPress={() => handleDeleteCattle(group.cattleId, group.cattleName)}
+                                disabled={deleting === group.cattleId}
+                              >
+                                {deleting === group.cattleId ? (
+                                  <ActivityIndicator size="small" color="#EF4444" />
+                                ) : (
+                                  <>
+                                    <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                                    <Text style={[styles.detailActionText, styles.detailActionTextDelete]}>Delete</Text>
+                                  </>
+                                )}
+                              </Pressable>
+                            </View>
+                          </View>
+                        )}
+                      </>
+                    ) : (
+                      // Active Pregnancy - New prominent layout
+                      <View style={styles.activePregnancyCard}>
+                        {/* Header Section */}
+                        <View style={styles.activePregnancyHeader}>
+                          <View style={styles.activePregnancyHeaderLeft}>
+                            <View style={styles.activePregnancyIconContainer}>
+                              <Ionicons name="heart" size={28} color="#0a7ea4" />
+                            </View>
+                            <View style={styles.activePregnancyTitleSection}>
+                              <Text style={styles.activePregnancyTitle}>{group.cattleName}</Text>
+                              <View style={styles.activePregnancyBadge}>
+                                <Ionicons name="time" size={14} color="#0a7ea4" />
+                                <Text style={styles.activePregnancyBadgeText}>Active Pregnancy</Text>
+                              </View>
+                            </View>
+                          </View>
+                        </View>
+
+                        {/* Expected Delivery - Prominent Display */}
+                        {expectedMonths && (
+                          <View style={styles.activeExpectedDelivery}>
+                            <View style={styles.activeExpectedDeliveryIcon}>
+                              <Ionicons name="calendar" size={24} color="#fff" />
+                            </View>
+                            <View style={styles.activeExpectedDeliveryContent}>
+                              <Text style={styles.activeExpectedDeliveryLabel}>Expected Delivery</Text>
+                              <Text style={styles.activeExpectedDeliveryValue}>{expectedMonths.display}</Text>
+                              <Text style={styles.activeExpectedDeliveryNote}>±15 days estimate</Text>
+                            </View>
                           </View>
                         )}
 
-                        {/* Trimester */}
-                        <View style={styles.detailSection}>
-                          <View style={styles.detailSectionHeader}>
-                            <Ionicons name="time" size={18} color="#D97706" />
-                            <Text style={styles.detailSectionTitle}>Trimester</Text>
+                        {/* Trimester & Blocked Months Row */}
+                        <View style={styles.activeInfoRow}>
+                          <View style={styles.activeTrimesterCard}>
+                            <Ionicons name="time" size={20} color="#D97706" />
+                            <Text style={styles.activeTrimesterLabel}>Trimester</Text>
+                            <Tag label={mainPlan.trimester || 'early'} tone="warning" />
                           </View>
-                          <Tag label={mainPlan.trimester || 'early'} tone="warning" />
+                          
+                          {blockedMonthsArray.length > 0 && (
+                            <View style={styles.activeBlockedMonthsCard}>
+                              <Ionicons name="lock-closed" size={20} color="#92400E" />
+                              <Text style={styles.activeBlockedMonthsLabel}>Blocked</Text>
+                              <Text style={styles.activeBlockedMonthsCount}>{blockedMonthsArray.length} months</Text>
+                            </View>
+                          )}
                         </View>
 
-                        {/* Blocked Months */}
+                        {/* Blocked Months Grid */}
                         {blockedMonthsArray.length > 0 && (
-                          <View style={styles.detailSection}>
-                            <View style={styles.detailSectionHeader}>
-                              <Ionicons name="lock-closed" size={18} color="#92400E" />
-                              <Text style={styles.detailSectionTitle}>Blocked Months</Text>
-                            </View>
-                            <View style={styles.blockedMonthsRow}>
+                          <View style={styles.activeBlockedMonthsSection}>
+                            <Text style={styles.activeBlockedMonthsSectionTitle}>
+                              {(() => {
+                                const trimester = mainPlan.trimester || 'early';
+                                if (cattleType === 'cow') {
+                                  return trimester === 'early' 
+                                    ? 'Months 0-3 from pregnancy date' 
+                                    : trimester === 'mid' 
+                                    ? 'Months 3-6 from pregnancy date' 
+                                    : 'Months 6-9 from pregnancy date';
+                                } else {
+                                  return trimester === 'early' 
+                                    ? 'Months 0-4 from pregnancy date' 
+                                    : trimester === 'mid' 
+                                    ? 'Months 4-8 from pregnancy date' 
+                                    : 'Months 8-12 from pregnancy date';
+                                }
+                              })()}
+                            </Text>
+                            <View style={styles.activeBlockedMonthsGrid}>
                               {blockedMonthsArray.map((month) => (
-                                <View key={month} style={styles.blockedMonthChip}>
-                                  <Text style={styles.blockedMonthText}>{month}</Text>
+                                <View key={month} style={styles.activeBlockedMonthChip}>
+                                  <Ionicons name="lock-closed" size={14} color="#92400E" />
+                                  <Text style={styles.activeBlockedMonthText}>{month}</Text>
                                 </View>
                               ))}
                             </View>
                           </View>
                         )}
 
-                        {/* To-Do List */}
-                        <View style={styles.detailSection}>
-                          <View style={styles.detailSectionHeader}>
-                            <Ionicons name="list" size={18} color="#D97706" />
-                            <Text style={styles.detailSectionTitle}>To-Do List</Text>
-                            {!isCompleted && (
-                              <Pressable 
-                                style={styles.addTodoButtonInline}
-                                onPress={() => openTodoModal(group.cattleId, mainPlan.id)}
-                              >
-                                <Ionicons name="add-circle" size={20} color="#D97706" />
-                              </Pressable>
-                            )}
+                        {/* To-Do List Section */}
+                        <View style={styles.activeTodosSection}>
+                          <View style={styles.activeTodosHeader}>
+                            <View style={styles.activeTodosHeaderLeft}>
+                              <Ionicons name="list" size={20} color="#D97706" />
+                              <Text style={styles.activeTodosTitle}>To-Do List</Text>
+                              {todos.length > 0 && (
+                                <View style={styles.activeTodosCountBadge}>
+                                  <Text style={styles.activeTodosCountText}>{todos.length}</Text>
+                                </View>
+                              )}
+                            </View>
+                            <Pressable 
+                              style={styles.activeAddTodoButton}
+                              onPress={() => openTodoModal(group.cattleId, mainPlan.id)}
+                            >
+                              <Ionicons name="add-circle" size={24} color="#D97706" />
+                            </Pressable>
                           </View>
                           
                           {todos.length === 0 ? (
-                            <View style={styles.emptyTodosInline}>
-                              <Ionicons name="checkmark-circle-outline" size={32} color="#CBD5E1" />
-                              <Text style={styles.emptyTodosInlineText}>No tasks yet</Text>
+                            <View style={styles.activeEmptyTodos}>
+                              <Ionicons name="checkmark-circle-outline" size={40} color="#CBD5E1" />
+                              <Text style={styles.activeEmptyTodosText}>No tasks yet. Add your first task!</Text>
                             </View>
                           ) : (
-                            <View style={styles.todosListInline}>
+                            <View style={styles.activeTodosList}>
                               {todos.map((entry, idx) => {
                                 const todoCompleted = entry.completed || false;
                                 return (
-                                  <View key={entry.id || idx} style={[styles.todoItemInline, todoCompleted && styles.todoItemInlineCompleted]}>
+                                  <View key={entry.id || idx} style={[styles.activeTodoItem, todoCompleted && styles.activeTodoItemCompleted]}>
                                     <Pressable
-                                      style={styles.todoCheckboxInline}
+                                      style={styles.activeTodoCheckbox}
                                       onPress={() => entry.id && handleToggleTodo(entry.id, todoCompleted)}
                                     >
-                                      <View style={[styles.checkboxInline, todoCompleted && styles.checkboxInlineChecked]}>
-                                        {todoCompleted && <Ionicons name="checkmark" size={12} color="#fff" />}
+                                      <View style={[styles.activeCheckbox, todoCompleted && styles.activeCheckboxChecked]}>
+                                        {todoCompleted && <Ionicons name="checkmark" size={14} color="#fff" />}
                                       </View>
                                     </Pressable>
-                                    <View style={styles.todoContentInline}>
-                                      <View style={styles.todoHeaderInline}>
-                                        <View style={styles.todoDateInline}>
-                                          <Ionicons name="calendar-outline" size={12} color="#64748B" />
-                                          <Text style={styles.todoDateTextInline}>{formatDisplayDate(entry.calendarDate || '')}</Text>
+                                    <View style={styles.activeTodoContent}>
+                                      <View style={styles.activeTodoHeader}>
+                                        <View style={styles.activeTodoDate}>
+                                          <Ionicons name="calendar-outline" size={14} color="#64748B" />
+                                          <Text style={styles.activeTodoDateText}>{formatDisplayDate(entry.calendarDate || '')}</Text>
                                         </View>
                                         <Pressable
-                                          style={styles.todoDeleteInline}
+                                          style={styles.activeTodoDelete}
                                           onPress={() => entry.id && handleDeleteTodo(entry.id)}
                                           disabled={deletingTodo === entry.id}
                                         >
                                           {deletingTodo === entry.id ? (
                                             <ActivityIndicator size="small" color="#EF4444" />
                                           ) : (
-                                            <Ionicons name="trash-outline" size={14} color="#EF4444" />
+                                            <Ionicons name="trash-outline" size={16} color="#EF4444" />
                                           )}
                                         </Pressable>
                                       </View>
-                                      <Text style={[styles.todoTextInline, todoCompleted && styles.todoTextInlineCompleted]}>
+                                      <Text style={[styles.activeTodoText, todoCompleted && styles.activeTodoTextCompleted]}>
                                         {entry.todo}
                                       </Text>
                                     </View>
@@ -755,18 +958,16 @@ export default function PregnancyScreen() {
                         </View>
 
                         {/* Action Buttons */}
-                        <View style={styles.detailActions}>
-                          {!isCompleted && (
-                            <Pressable
-                              style={styles.detailActionButton}
-                              onPress={() => mainPlan.id && handleEditTrimester(mainPlan.id, (mainPlan.trimester || 'early') as 'early' | 'mid' | 'late')}
-                            >
-                              <Ionicons name="pencil" size={18} color="#0a7ea4" />
-                              <Text style={styles.detailActionText}>Edit Trimester</Text>
-                            </Pressable>
-                          )}
+                        <View style={styles.activeActions}>
                           <Pressable
-                            style={[styles.detailActionButton, styles.detailActionButtonDelete]}
+                            style={styles.activeEditButton}
+                            onPress={() => mainPlan.id && handleEditTrimester(mainPlan.id, (mainPlan.trimester || 'early') as 'early' | 'mid' | 'late')}
+                          >
+                            <Ionicons name="pencil" size={18} color="#0a7ea4" />
+                            <Text style={styles.activeEditButtonText}>Edit Trimester</Text>
+                          </Pressable>
+                          <Pressable
+                            style={styles.activeDeleteButton}
                             onPress={() => handleDeleteCattle(group.cattleId, group.cattleName)}
                             disabled={deleting === group.cattleId}
                           >
@@ -775,7 +976,7 @@ export default function PregnancyScreen() {
                             ) : (
                               <>
                                 <Ionicons name="trash-outline" size={18} color="#EF4444" />
-                                <Text style={[styles.detailActionText, styles.detailActionTextDelete]}>Delete</Text>
+                                <Text style={styles.activeDeleteButtonText}>Delete</Text>
                               </>
                             )}
                           </Pressable>
@@ -827,11 +1028,23 @@ export default function PregnancyScreen() {
                           {trimester.charAt(0).toUpperCase() + trimester.slice(1)} Trimester
                         </Text>
                         <Text style={styles.trimesterOptionDescription}>
-                          {trimester === 'early' 
-                            ? 'Months 0-3 of pregnancy' 
-                            : trimester === 'mid' 
-                            ? 'Months 3-6 of pregnancy' 
-                            : 'Months 6-9 of pregnancy'}
+                          {(() => {
+                            const cattleMeta = herd.find(c => c.id === filteredPlans.find(p => p.id === editingPlanId)?.cattleId);
+                            const cattleType = cattleMeta?.type || 'cow';
+                            if (cattleType === 'cow') {
+                              return trimester === 'early' 
+                                ? 'Months 0-3 of pregnancy' 
+                                : trimester === 'mid' 
+                                ? 'Months 3-6 of pregnancy' 
+                                : 'Months 6-9 of pregnancy';
+                            } else {
+                              return trimester === 'early' 
+                                ? 'Months 0-4 of pregnancy' 
+                                : trimester === 'mid' 
+                                ? 'Months 4-8 of pregnancy' 
+                                : 'Months 8-12 of pregnancy';
+                            }
+                          })()}
                         </Text>
                       </View>
                       {editTrimesterValue === trimester && (
@@ -2223,6 +2436,11 @@ const styles = StyleSheet.create({
     color: '#475569',
     fontWeight: '500',
   },
+  detailSectionSubtitle: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 2,
+  },
   detailSectionNote: {
     fontSize: 12,
     color: '#94A3B8',
@@ -2377,5 +2595,342 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '700',
     fontSize: 15,
+  },
+  // Active Pregnancy Layout Styles
+  activePregnancyCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: '#E0F2FE',
+    shadowColor: '#0a7ea4',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+    ...(Platform.OS === 'web' && {
+      boxShadow: createBoxShadow('#0a7ea4', { width: 0, height: 4 }, 0.1, 12),
+    }),
+  },
+  activePregnancyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+  },
+  activePregnancyHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+  },
+  activePregnancyIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: '#E0F2FE',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  activePregnancyTitleSection: {
+    flex: 1,
+  },
+  activePregnancyTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 6,
+  },
+  activePregnancyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#E0F2FE',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  activePregnancyBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#0a7ea4',
+    textTransform: 'uppercase',
+  },
+  activeExpectedDelivery: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0a7ea4',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+    gap: 16,
+    shadowColor: '#0a7ea4',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
+    ...(Platform.OS === 'web' && {
+      boxShadow: createBoxShadow('#0a7ea4', { width: 0, height: 2 }, 0.2, 6),
+    }),
+  },
+  activeExpectedDeliveryIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  activeExpectedDeliveryContent: {
+    flex: 1,
+  },
+  activeExpectedDeliveryLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.9)',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  activeExpectedDeliveryValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  activeExpectedDeliveryNote: {
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontStyle: 'italic',
+  },
+  activeInfoRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  activeTrimesterCard: {
+    flex: 1,
+    backgroundColor: '#FEF3C7',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: '#FCD34D',
+    alignItems: 'center',
+    gap: 8,
+  },
+  activeTrimesterLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#92400E',
+    textTransform: 'uppercase',
+  },
+  activeBlockedMonthsCard: {
+    flex: 1,
+    backgroundColor: '#FFFBEB',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: '#FCD34D',
+    alignItems: 'center',
+    gap: 8,
+  },
+  activeBlockedMonthsLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#92400E',
+    textTransform: 'uppercase',
+  },
+  activeBlockedMonthsCount: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#92400E',
+  },
+  activeBlockedMonthsSection: {
+    marginBottom: 20,
+  },
+  activeBlockedMonthsSectionTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
+    marginBottom: 12,
+  },
+  activeBlockedMonthsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  activeBlockedMonthChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FEF3C7',
+    borderWidth: 2,
+    borderColor: '#FCD34D',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  activeBlockedMonthText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#92400E',
+  },
+  activeTodosSection: {
+    marginBottom: 20,
+  },
+  activeTodosHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  activeTodosHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  activeTodosTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  activeTodosCountBadge: {
+    backgroundColor: '#D97706',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginLeft: 8,
+  },
+  activeTodosCountText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  activeAddTodoButton: {
+    padding: 4,
+  },
+  activeEmptyTodos: {
+    alignItems: 'center',
+    paddingVertical: 32,
+    gap: 12,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+    borderStyle: 'dashed',
+  },
+  activeEmptyTodosText: {
+    fontSize: 14,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
+  activeTodosList: {
+    gap: 12,
+  },
+  activeTodoItem: {
+    flexDirection: 'row',
+    gap: 12,
+    padding: 16,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  activeTodoItemCompleted: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#D1FAE5',
+    opacity: 0.8,
+  },
+  activeTodoCheckbox: {
+    paddingTop: 2,
+  },
+  activeCheckbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#D97706',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  activeCheckboxChecked: {
+    backgroundColor: '#D97706',
+    borderColor: '#D97706',
+  },
+  activeTodoContent: {
+    flex: 1,
+    gap: 8,
+  },
+  activeTodoHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  activeTodoDate: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  activeTodoDateText: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  activeTodoDelete: {
+    padding: 4,
+  },
+  activeTodoText: {
+    fontSize: 14,
+    color: '#0F172A',
+    lineHeight: 20,
+    fontWeight: '500',
+  },
+  activeTodoTextCompleted: {
+    textDecorationLine: 'line-through',
+    color: '#94A3B8',
+  },
+  activeActions: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
+  activeEditButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#F0F9FF',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+  },
+  activeEditButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0a7ea4',
+  },
+  activeDeleteButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  activeDeleteButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#EF4444',
   },
 });

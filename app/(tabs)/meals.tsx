@@ -380,7 +380,6 @@ export default function MealsScreen() {
   const [showRecipeModal, setShowRecipeModal] = useState(false);
   const [showPlanDetailModal, setShowPlanDetailModal] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState<RecipeType | null>(null);
-  const [selectedCattle, setSelectedCattle] = useState<(CattleProfile & { id: string }) | null>(null);
   const [selectedDietFocus, setSelectedDietFocus] = useState('maintenance');
   const [selectedDays, setSelectedDays] = useState(7);
   const [selectedPlanCattle, setSelectedPlanCattle] = useState<string | null>(null);
@@ -436,10 +435,12 @@ export default function MealsScreen() {
   };
 
   const generateMealPlan = async () => {
-    if (!user || !selectedCattle) {
-      Alert.alert('Select Cattle', 'Please select a cattle to create a meal plan.');
+    if (!user || !contextSelectedCattle) {
+      Alert.alert('Select Cattle', 'Please select a cattle profile from the home tab to create a meal plan.');
       return;
     }
+    
+    const selectedCattle = contextSelectedCattle as CattleProfile & { id: string };
 
     const recipes = selectedCattle.type === 'cow' ? cowRecipes : horseRecipes;
     
@@ -492,7 +493,6 @@ export default function MealsScreen() {
 
       Alert.alert('Success!', `${selectedDays}-day meal plan created for ${selectedCattle.name}`);
       setShowPlannerModal(false);
-      setSelectedCattle(null);
     } catch (err) {
       console.error(err);
       Alert.alert('Error', 'Failed to create meal plan. Try again.');
@@ -552,6 +552,7 @@ export default function MealsScreen() {
     const data = groupedPlans.find(([id]) => id === selectedPlanCattle);
     return data ? data[1] : null;
   }, [selectedPlanCattle, groupedPlans]);
+
 
   // Group plans by day for detail view
   const plansByDay = useMemo(() => {
@@ -794,41 +795,29 @@ export default function MealsScreen() {
               <View style={{ width: 40 }} />
             </View>
 
-            {/* Select Cattle */}
-            <View style={styles.formSection}>
-              <Text style={styles.formLabel}>Select Cattle</Text>
-              {herd.length === 0 ? (
-                <Text style={styles.emptyText}>No cattle profiles found. Create one first.</Text>
-              ) : (
-                <View style={styles.cattleGrid}>
-                  {herd.map((cattle) => (
-                    <Pressable
-                      key={cattle.id}
-                      style={[
-                        styles.cattleOption,
-                        selectedCattle?.id === cattle.id && styles.cattleOptionSelected,
-                      ]}
-                      onPress={() => setSelectedCattle(cattle as CattleProfile & { id: string })}
-                    >
-                      <View style={[styles.cattleOptionIcon, cattle.type === 'horse' && styles.horseOptionIcon]}>
-                        <Ionicons
-                          name={cattle.type === 'cow' ? 'logo-octocat' : 'git-branch-outline'}
-                          size={20}
-                          color={cattle.type === 'cow' ? '#0a7ea4' : '#D97706'}
-                        />
-                      </View>
-                      <Text style={[
-                        styles.cattleOptionName,
-                        selectedCattle?.id === cattle.id && styles.cattleOptionNameSelected,
-                      ]}>{cattle.name}</Text>
-                      {selectedCattle?.id === cattle.id && (
-                        <Ionicons name="checkmark-circle" size={20} color="#0a7ea4" />
-                      )}
-                    </Pressable>
-                  ))}
+            {/* Show Selected Cattle (if profile is open) */}
+            {contextSelectedCattle && (
+              <View style={styles.formSection}>
+                <Text style={styles.formLabel}>Selected Cattle</Text>
+                <View style={styles.selectedCattleCard}>
+                  <View style={styles.selectedCattleInfo}>
+                    <Ionicons name={contextSelectedCattle.type === 'cow' ? 'logo-octocat' : 'git-branch-outline'} size={24} color={contextSelectedCattle.type === 'cow' ? '#0a7ea4' : '#D97706'} />
+                    <View style={{ flex: 1, marginLeft: 12 }}>
+                      <Text style={styles.selectedCattleName}>{contextSelectedCattle.name}</Text>
+                      <Text style={styles.selectedCattleMeta}>
+                        {contextSelectedCattle.type === 'cow' ? 'Cow' : 'Horse'} • {contextSelectedCattle.weightValue || '—'} {contextSelectedCattle.weightUnit || 'kg'}
+                      </Text>
+                    </View>
+                  </View>
                 </View>
-              )}
-            </View>
+              </View>
+            )}
+
+            {!contextSelectedCattle && (
+              <View style={styles.formSection}>
+                <Text style={styles.emptyText}>Please select a cattle profile from the home tab to create a meal plan.</Text>
+              </View>
+            )}
 
             {/* Diet Focus */}
             <View style={styles.formSection}>
@@ -1405,6 +1394,28 @@ const styles = StyleSheet.create({
   },
   formSection: {
     marginBottom: 28,
+  },
+  selectedCattleCard: {
+    backgroundColor: '#F0F9FF',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: '#E0F2FE',
+    marginTop: 8,
+  },
+  selectedCattleInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  selectedCattleName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 4,
+  },
+  selectedCattleMeta: {
+    fontSize: 13,
+    color: '#64748B',
   },
   formLabel: {
     fontSize: 16,

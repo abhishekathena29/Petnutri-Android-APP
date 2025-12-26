@@ -90,7 +90,16 @@ export default function HerdHomeScreen() {
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => currentYear + i);
   const allMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'];
+  // Dynamic months based on cattle type: 9 months for cows, 12 months for horses
+  const pregnancyMonths = useMemo(() => {
+    if (!editingId) return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']; // Default to cow
+    const editingCattle = cattle.find(c => c.id === editingId);
+    const cattleType = editingCattle?.type || 'cow';
+    return cattleType === 'cow' 
+      ? ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']
+      : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  }, [editingId, cattle]);
+  const months = pregnancyMonths;
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedDay, setSelectedDay] = useState(new Date().getDate());
@@ -206,10 +215,63 @@ export default function HerdHomeScreen() {
     setShowDatePicker(true);
   };
 
+  // Calculate blocked months based on due date and trimester
+  // Calculate blocked months based on pregnancy date and trimester
+  // dueDateStr is actually the pregnancy date (when they got pregnant)
+  // For cows (9 months): Early: 0-3, Mid: 3-6, Late: 6-9
+  // For horses (12 months): Early: 0-4, Mid: 4-8, Late: 8-12
+  const calculateBlockedMonthsForTrimester = (dueDateStr: string, trimester: 'early' | 'mid' | 'late', cattleType: 'cow' | 'horse'): string[] => {
+    if (!dueDateStr) return [];
+    
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    
+    try {
+      // dueDateStr is actually the pregnancy date
+      const pregnancyDate = new Date(dueDateStr);
+      
+      // Determine month range based on trimester and cattle type
+      // The pregnancy month itself counts as month 1
+      // For cows (9 months): Early: months 1-3 (0-2 offset), Mid: months 4-6 (3-5 offset), Late: months 7-9 (6-8 offset)
+      // For horses (12 months): Early: months 1-4 (0-3 offset), Mid: months 5-8 (4-7 offset), Late: months 9-12 (8-11 offset)
+      let startMonthOffset = 0;
+      let endMonthOffset = cattleType === 'cow' ? 3 : 4; // End is exclusive
+      
+      if (trimester === 'mid') {
+        startMonthOffset = cattleType === 'cow' ? 3 : 4;
+        endMonthOffset = cattleType === 'cow' ? 6 : 8;
+      } else if (trimester === 'late') {
+        startMonthOffset = cattleType === 'cow' ? 6 : 8;
+        endMonthOffset = cattleType === 'cow' ? 9 : 12;
+      }
+      
+      const blockedMonths: string[] = [];
+      
+      // Calculate blocked months starting from pregnancy date
+      for (let i = startMonthOffset; i < endMonthOffset; i++) {
+        const monthDate = new Date(pregnancyDate);
+        monthDate.setMonth(monthDate.getMonth() + i);
+        const monthName = monthNames[monthDate.getMonth()];
+        if (!blockedMonths.includes(monthName)) {
+          blockedMonths.push(monthName);
+        }
+      }
+      
+      return blockedMonths;
+    } catch {
+      return [];
+    }
+  };
+
   const handlePregnancyDateConfirm = () => {
     const date = new Date(selectedYear, selectedMonth, selectedDay);
     const dateStr = date.toISOString().split('T')[0];
-    setPregnancyForm((prev) => ({ ...prev, dueDate: dateStr }));
+    setPregnancyForm((prev) => {
+      // Auto-calculate blocked months based on due date and trimester
+      const cattleMeta = editingId ? cattle.find(c => c.id === editingId) : null;
+      const cattleType = cattleMeta?.type || 'cow';
+      const autoBlockedMonths = calculateBlockedMonthsForTrimester(dateStr, prev.trimester, cattleType);
+      return { ...prev, dueDate: dateStr, blockedMonths: autoBlockedMonths };
+    });
     setShowDatePicker(false);
   };
 
@@ -1294,7 +1356,18 @@ export default function HerdHomeScreen() {
                       <Pressable
                         key={trimester}
                         style={[styles.toggleChip, styles.toggleChipResponsive, pregnancyForm.trimester === trimester && styles.toggleChipActive]}
-                        onPress={() => setPregnancyForm((prev) => ({ ...prev, trimester }))}
+                        onPress={() => {
+                          setPregnancyForm((prev) => {
+                            // Auto-calculate blocked months when trimester changes
+                            if (prev.dueDate) {
+                              const cattleMeta = editingId ? cattle.find(c => c.id === editingId) : null;
+                              const cattleType = cattleMeta?.type || 'cow';
+                              const autoBlockedMonths = calculateBlockedMonthsForTrimester(prev.dueDate, trimester, cattleType);
+                              return { ...prev, trimester, blockedMonths: autoBlockedMonths };
+                            }
+                            return { ...prev, trimester };
+                          });
+                        }}
                       >
                         <Text style={[styles.toggleText, pregnancyForm.trimester === trimester && styles.toggleTextActive]}>
                           {trimester} trimester
@@ -1371,7 +1444,18 @@ export default function HerdHomeScreen() {
                         <Pressable
                           key={trimester}
                           style={[styles.toggleChip, styles.toggleChipResponsive, pregnancyForm.trimester === trimester && styles.toggleChipActive]}
-                          onPress={() => setPregnancyForm((prev) => ({ ...prev, trimester }))}
+                          onPress={() => {
+                          setPregnancyForm((prev) => {
+                            // Auto-calculate blocked months when trimester changes
+                            if (prev.dueDate) {
+                              const cattleMeta = editingId ? cattle.find(c => c.id === editingId) : null;
+                              const cattleType = cattleMeta?.type || 'cow';
+                              const autoBlockedMonths = calculateBlockedMonthsForTrimester(prev.dueDate, trimester, cattleType);
+                              return { ...prev, trimester, blockedMonths: autoBlockedMonths };
+                            }
+                            return { ...prev, trimester };
+                          });
+                        }}
                         >
                           <Text style={[styles.toggleText, pregnancyForm.trimester === trimester && styles.toggleTextActive]}>
                             {trimester} trimester

@@ -2,19 +2,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Keyboard,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TouchableWithoutFeedback,
-    View
+  ActivityIndicator,
+  Alert,
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableWithoutFeedback,
+  View
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -179,102 +179,110 @@ export default function SelectProfileScreen() {
     });
   };
 
-  const calculateBlockedMonths = (pregnancyDateStr: string, trimester: 'early' | 'mid' | 'late') => {
+  const calculateBlockedMonths = (pregnancyDateStr: string, trimester: 'early' | 'mid' | 'late', cattleType: 'cow' | 'horse' = 'cow') => {
     if (!pregnancyDateStr) return [];
     
-    const pregnancyDate = new Date(pregnancyDateStr);
-    const blockedMonths: string[] = [];
-    
-    // Calculate months based on trimester
-    // Early: months 0-3, Mid: months 3-6, Late: months 6-9
-    let startMonth = 0;
-    let endMonth = 3;
-    
-    if (trimester === 'mid') {
-      startMonth = 3;
-      endMonth = 6;
-    } else if (trimester === 'late') {
-      startMonth = 6;
-      endMonth = 9;
-    }
-    
-    // Calculate expected delivery date (pregnancy date + 9 months)
-    const expectedDeliveryDate = new Date(pregnancyDate);
-    expectedDeliveryDate.setMonth(expectedDeliveryDate.getMonth() + 9);
-    
-    // Get all months from pregnancy date to expected delivery
-    const currentDate = new Date(pregnancyDate);
-    const allMonths: string[] = [];
-    
-    for (let i = 0; i <= 9; i++) {
-      const monthDate = new Date(pregnancyDate);
-      monthDate.setMonth(monthDate.getMonth() + i);
-      const monthName = monthDate.toLocaleDateString('en-US', { month: 'short' });
-      allMonths.push(monthName);
-    }
-    
-    // Get blocked months based on trimester
-    for (let i = startMonth; i < endMonth; i++) {
-      const monthDate = new Date(pregnancyDate);
-      monthDate.setMonth(monthDate.getMonth() + i);
-      const monthName = monthDate.toLocaleDateString('en-US', { month: 'short' });
-      if (!blockedMonths.includes(monthName)) {
-        blockedMonths.push(monthName);
+    try {
+      // Parse date properly to avoid timezone issues
+      const dateStr = pregnancyDateStr.split('T')[0];
+      const [year, month, day] = dateStr.split('-').map(Number);
+      const pregnancyDate = new Date(year, month - 1, day);
+      
+      const blockedMonths: string[] = [];
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      
+      // Determine month range based on trimester and cattle type
+      // The pregnancy month itself counts as month 1
+      // For cows (9 months): Early: months 1-3 (0-2 offset), Mid: months 4-6 (3-5 offset), Late: months 7-9 (6-8 offset)
+      // For horses (12 months): Early: months 1-4 (0-3 offset), Mid: months 5-8 (4-7 offset), Late: months 9-12 (8-11 offset)
+      let startMonthOffset = 0;
+      let endMonthOffset = cattleType === 'cow' ? 3 : 4; // End is exclusive
+      
+      if (trimester === 'mid') {
+        startMonthOffset = cattleType === 'cow' ? 3 : 4;
+        endMonthOffset = cattleType === 'cow' ? 6 : 8;
+      } else if (trimester === 'late') {
+        startMonthOffset = cattleType === 'cow' ? 6 : 8;
+        endMonthOffset = cattleType === 'cow' ? 9 : 12;
       }
+      
+      // Calculate blocked months starting from pregnancy date (month 1)
+      for (let i = startMonthOffset; i < endMonthOffset; i++) {
+        const monthDate = new Date(pregnancyDate);
+        monthDate.setMonth(monthDate.getMonth() + i);
+        const monthName = monthNames[monthDate.getMonth()];
+        if (!blockedMonths.includes(monthName)) {
+          blockedMonths.push(monthName);
+        }
+      }
+      
+      return blockedMonths;
+    } catch {
+      return [];
     }
-    
-    return blockedMonths;
   };
 
-  const calculateExpectedDeliveryDate = (pregnancyDateStr: string) => {
+  const calculateExpectedDeliveryDate = (pregnancyDateStr: string, cattleType: 'cow' | 'horse' = 'cow') => {
     if (!pregnancyDateStr) return '';
-    const pregnancyDate = new Date(pregnancyDateStr);
+    const pregnancyMonths = cattleType === 'cow' ? 9 : 12;
+    // Parse date properly to avoid timezone issues
+    const dateStr = pregnancyDateStr.split('T')[0];
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const pregnancyDate = new Date(year, month - 1, day);
     const expectedDate = new Date(pregnancyDate);
-    expectedDate.setMonth(expectedDate.getMonth() + 9);
+    expectedDate.setMonth(expectedDate.getMonth() + pregnancyMonths);
     return expectedDate.toISOString().split('T')[0];
   };
 
-  const calculateExpectedMonths = (pregnancyDateStr: string) => {
+  const calculateExpectedMonths = (pregnancyDateStr: string, cattleType: 'cow' | 'horse' = 'cow') => {
     if (!pregnancyDateStr) return null;
     
-    const pregnancyDate = new Date(pregnancyDateStr);
-    const day = pregnancyDate.getDate();
+    const pregnancyMonths = cattleType === 'cow' ? 9 : 12;
     
-    // Calculate expected delivery date (pregnancy date + 9 months)
-    const expectedDate = new Date(pregnancyDate);
-    expectedDate.setMonth(expectedDate.getMonth() + 9);
-    
-    const expectedMonth = expectedDate.getMonth(); // 0-11
-    const expectedYear = expectedDate.getFullYear();
-    
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    
-    if (day >= 1 && day <= 15) {
-      // Suggest two months: current month and next month
-      const firstMonth = monthNames[expectedMonth];
-      const secondMonthIndex = (expectedMonth + 1) % 12;
-      const secondMonth = monthNames[secondMonthIndex];
-      const secondYear = secondMonthIndex === 0 ? expectedYear + 1 : expectedYear;
+    try {
+      // Parse date properly to avoid timezone issues
+      const dateStr = pregnancyDateStr.split('T')[0];
+      const [year, month, day] = dateStr.split('-').map(Number);
+      const pregnancyDate = new Date(year, month - 1, day);
+      
+      // Calculate expected delivery date (pregnancy date + pregnancy months)
+      const expectedDeliveryDate = new Date(pregnancyDate);
+      expectedDeliveryDate.setMonth(expectedDeliveryDate.getMonth() + pregnancyMonths);
+      
+      // Calculate 15 days before and after the expected delivery date
+      const dayBefore = new Date(expectedDeliveryDate);
+      dayBefore.setDate(dayBefore.getDate() - 15);
+      
+      const dayAfter = new Date(expectedDeliveryDate);
+      dayAfter.setDate(dayAfter.getDate() + 15);
+      
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      
+      // Get the months for the range (15 days before to 15 days after)
+      const beforeMonth = dayBefore.getMonth();
+      const beforeYear = dayBefore.getFullYear();
+      const afterMonth = dayAfter.getMonth();
+      const afterYear = dayAfter.getFullYear();
+      
+      // Always show the actual months that the range spans (15 days before to 15 days after)
+      const firstMonth = monthNames[beforeMonth];
+      const secondMonth = monthNames[afterMonth];
       
       return {
         months: [firstMonth, secondMonth],
-        years: [expectedYear, secondYear],
-        display: `${firstMonth} ${expectedYear} to ${secondMonth} ${secondYear}`
+        years: [beforeYear, afterYear],
+        display: `${firstMonth} ${beforeYear} to ${secondMonth} ${afterYear}`
       };
-    } else {
-      // Suggest Dec to Jan (next year)
-      return {
-        months: ['Dec', 'Jan'],
-        years: [expectedYear, expectedYear + 1],
-        display: `Dec ${expectedYear} to Jan ${expectedYear + 1}`
-      };
+    } catch {
+      return null;
     }
   };
 
   const handlePregnancyDateConfirm = () => {
     const formattedDate = `${pregnancyDateYear}-${String(pregnancyDateMonth + 1).padStart(2, '0')}-${String(pregnancyDateDay).padStart(2, '0')}`;
-    const blockedMonths = calculateBlockedMonths(formattedDate, pregnancyForm.trimester);
-    const dueDate = calculateExpectedDeliveryDate(formattedDate);
+    const cattleType = form.type || 'cow';
+    const blockedMonths = calculateBlockedMonths(formattedDate, pregnancyForm.trimester, cattleType);
+    const dueDate = calculateExpectedDeliveryDate(formattedDate, cattleType);
     
     setPregnancyForm((prev) => ({ 
       ...prev, 
@@ -296,10 +304,11 @@ export default function SelectProfileScreen() {
   // Update blocked months when trimester changes
   useEffect(() => {
     if (pregnancyForm.pregnancyDate) {
-      const blockedMonths = calculateBlockedMonths(pregnancyForm.pregnancyDate, pregnancyForm.trimester);
+      const cattleType = form.type || 'cow';
+      const blockedMonths = calculateBlockedMonths(pregnancyForm.pregnancyDate, pregnancyForm.trimester, cattleType);
       setPregnancyForm((prev) => ({ ...prev, blockedMonths }));
     }
-  }, [pregnancyForm.trimester]);
+  }, [pregnancyForm.trimester, form.type]);
 
   const getDaysInMonth = (year: number, month: number) => {
     return new Date(year, month + 1, 0).getDate();
@@ -455,7 +464,7 @@ export default function SelectProfileScreen() {
                   <View style={styles.profileInfo}>
                     <View style={styles.profileHeader}>
                       <Text style={styles.profileName}>{item.name}</Text>
-                      <Text style={styles.profileSex}>{item.sex === 'male' ? '♂' : '♀'}</Text>
+                      <Text style={styles.metaText}>{item.sex === 'male' ? '♂' : '♀'}</Text>
                     </View>
                     <Text style={styles.profileBreed}>{item.breed || 'Unknown breed'}</Text>
                     <View style={styles.profileMeta}>
@@ -989,7 +998,8 @@ export default function SelectProfileScreen() {
                         <Text style={styles.expectedMonthTitle}>Expected Delivery Month</Text>
                       </View>
                       {(() => {
-                        const expectedMonths = calculateExpectedMonths(pregnancyForm.pregnancyDate);
+                        const cattleType = form.type || 'cow';
+                        const expectedMonths = calculateExpectedMonths(pregnancyForm.pregnancyDate, cattleType);
                         return expectedMonths ? (
                           <Text style={styles.expectedMonthValue}>{expectedMonths.display}</Text>
                         ) : null;
@@ -1118,7 +1128,8 @@ export default function SelectProfileScreen() {
                           <Text style={styles.expectedMonthTitle}>Expected Delivery Month</Text>
                         </View>
                         {(() => {
-                          const expectedMonths = calculateExpectedMonths(pregnancyForm.pregnancyDate);
+                          const cattleType = form.type || 'cow';
+                          const expectedMonths = calculateExpectedMonths(pregnancyForm.pregnancyDate, cattleType);
                           return expectedMonths ? (
                             <Text style={styles.expectedMonthValue}>{expectedMonths.display}</Text>
                           ) : null;
@@ -1253,7 +1264,7 @@ export default function SelectProfileScreen() {
                   {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 1 + i).map((year) => (
                     <Pressable
                       key={year}
-                      style={[styles.dateOption, pregnancyDateYear === year && styles.dateOptionTextSelected]}
+                      style={[styles.dateOption, pregnancyDateYear === year && styles.dateOptionSelected]}
                       onPress={() => setPregnancyDateYear(year)}
                     >
                       <Text style={[styles.dateOptionText, pregnancyDateYear === year && styles.dateOptionTextSelected]}>
@@ -1795,113 +1806,6 @@ const styles = StyleSheet.create({
   pickerOptionTextSelected: {
     color: '#0a7ea4',
     fontWeight: '600',
-  },
-  switchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 8,
-  },
-  switchInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  switchLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#0F172A',
-  },
-  datePickerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    marginBottom: 12,
-  },
-  datePickerText: {
-    fontSize: 15,
-    color: '#0F172A',
-    flex: 1,
-  },
-  datePickerPlaceholder: {
-    color: '#94A3B8',
-  },
-  dateModalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 24,
-    padding: 20,
-    width: '100%',
-    maxWidth: 400,
-  },
-  dateModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  dateModalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  datePickerRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 20,
-  },
-  dateColumn: {
-    flex: 1,
-  },
-  dateColumnLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#94A3B8',
-    textAlign: 'center',
-    marginBottom: 8,
-    textTransform: 'uppercase',
-  },
-  dateScrollView: {
-    height: 180,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-  },
-  dateOption: {
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    alignItems: 'center',
-  },
-  dateOptionSelected: {
-    backgroundColor: '#E0F2FE',
-    borderRadius: 8,
-    marginHorizontal: 4,
-  },
-  dateOptionText: {
-    fontSize: 16,
-    color: '#64748B',
-  },
-  dateOptionTextSelected: {
-    color: '#0a7ea4',
-    fontWeight: '700',
-  },
-  dateConfirmButton: {
-    backgroundColor: '#0a7ea4',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  dateConfirmText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 16,
   },
   secondaryButton: {
     backgroundColor: '#F1F5F9',
