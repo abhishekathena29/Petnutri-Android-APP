@@ -61,7 +61,6 @@ export default function TabLayout() {
     <>
       <Tabs
         screenOptions={({ route }) => ({
-          tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
           headerShown: true,
           headerTitleAlign: 'left',
           headerStyle: styles.header,
@@ -84,8 +83,22 @@ export default function TabLayout() {
           ),
           tabBarButton: HapticTab,
           tabBarStyle: {
+            backgroundColor: '#fff',
+            borderTopWidth: 1,
+            borderTopColor: '#E2E8F0',
             paddingVertical: 6,
             height: 70,
+            elevation: 8,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: -2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+          },
+          tabBarInactiveTintColor: '#94A3B8',
+          tabBarActiveTintColor: '#0a7ea4',
+          tabBarLabelStyle: {
+            fontSize: 12,
+            fontWeight: '600',
           },
           headerTitle: screenTitles[route.name] ?? 'PetNutri',
         })}>
