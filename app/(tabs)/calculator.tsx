@@ -341,65 +341,125 @@ export default function CalculatorScreen() {
               <Text style={styles.emptyHistorySubtext}>Create your first calculation above</Text>
             </View>
           ) : (
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={true}
-              style={styles.tableScrollContainer}
-              contentContainerStyle={styles.tableScrollContent}
-            >
-              <View style={styles.tableContainer}>
-                {/* Table Header */}
-                <View style={styles.tableHeader}>
-                  <Text style={[styles.tableHeaderCell, styles.tableHeaderCellCattle]}>Cattle</Text>
-                  <Text style={[styles.tableHeaderCell, styles.tableHeaderCellNumeric]}>Calories</Text>
-                  <Text style={[styles.tableHeaderCell, styles.tableHeaderCellNumeric]}>Protein</Text>
-                  <Text style={[styles.tableHeaderCell, styles.tableHeaderCellNumeric]}>Fiber</Text>
-                  <Text style={[styles.tableHeaderCell, styles.tableHeaderCellNumeric]}>Calcium</Text>
-                  <View style={[styles.tableHeaderCellEmpty]} />
-                </View>
-                
-                {/* Table Rows */}
-                {filteredRecords.map((entry) => (
-                  <View key={entry.id} style={styles.tableRow}>
-                    <View style={[styles.tableCell, styles.tableCellCattle]}>
-                      <Text style={styles.tableCellName}>{entry.cattleName}</Text>
-                      <Text style={styles.tableCellMeta}>
-                        {entry.type} • {entry.weightKg} kg • {entry.activityLevel} • {entry.productionStage}
-                      </Text>
+            <View style={styles.historyCardsContainer}>
+              {filteredRecords.map((entry) => (
+                <View key={entry.id} style={styles.historyCard}>
+                  <View style={styles.historyCardHeader}>
+                    <View style={styles.historyCardHeaderLeft}>
+                      <View style={styles.historyCardIcon}>
+                        <Ionicons 
+                          name={entry.type === 'cow' ? 'logo-octocat' : 'git-branch-outline'} 
+                          size={24} 
+                          color={entry.type === 'cow' ? '#0a7ea4' : '#D97706'} 
+                        />
+                      </View>
+                      <View style={styles.historyCardTitleSection}>
+                        <Text style={styles.historyCardTitle}>{entry.cattleName}</Text>
+                        <Text style={styles.historyCardMeta}>
+                          {entry.type} • {entry.weightKg} kg • {entry.activityLevel} • {entry.productionStage}
+                        </Text>
+                      </View>
                     </View>
-                    <View style={[styles.tableCell, styles.tableCellNumeric]}>
-                      <Text style={styles.tableCellValue}>{entry.totalCalories}</Text>
-                      <Text style={styles.tableCellUnit}>kcal</Text>
+                    <Pressable
+                      style={styles.historyCardDeleteButton}
+                      onPress={() => entry.id && handleDelete(entry.id, entry.cattleName)}
+                      disabled={deleting === entry.id}
+                    >
+                      {deleting === entry.id ? (
+                        <ActivityIndicator size="small" color="#EF4444" />
+                      ) : (
+                        <Ionicons name="trash-outline" size={20} color="#EF4444" />
+                      )}
+                    </Pressable>
+                  </View>
+                  
+                  <View style={styles.historyCardMetrics}>
+                    <View style={styles.historyMetricItem}>
+                      <Ionicons name="flame" size={18} color="#F59E0B" />
+                      <View style={styles.historyMetricContent}>
+                        <Text style={styles.historyMetricValue}>{entry.totalCalories}</Text>
+                        <Text style={styles.historyMetricLabel}>Calories (kcal)</Text>
+                        <Text style={styles.historyMetricNote}>
+                          Daily energy requirement based on weight, activity level, and production stage
+                        </Text>
+                      </View>
                     </View>
-                    <View style={[styles.tableCell, styles.tableCellNumeric]}>
-                      <Text style={styles.tableCellValue}>{entry.proteinGrams}</Text>
-                      <Text style={styles.tableCellUnit}>g</Text>
+                    
+                    <View style={styles.historyMetricItem}>
+                      <Ionicons name="fitness" size={18} color="#10B981" />
+                      <View style={styles.historyMetricContent}>
+                        <Text style={styles.historyMetricValue}>{entry.proteinGrams}</Text>
+                        <Text style={styles.historyMetricLabel}>Protein (g)</Text>
+                        <Text style={styles.historyMetricNote}>
+                          Essential for muscle development, growth, and tissue repair
+                        </Text>
+                      </View>
                     </View>
-                    <View style={[styles.tableCell, styles.tableCellNumeric]}>
-                      <Text style={styles.tableCellValue}>{entry.fiberGrams}</Text>
-                      <Text style={styles.tableCellUnit}>g</Text>
+                    
+                    <View style={styles.historyMetricItem}>
+                      <Ionicons name="leaf" size={18} color="#059669" />
+                      <View style={styles.historyMetricContent}>
+                        <Text style={styles.historyMetricValue}>{entry.fiberGrams}</Text>
+                        <Text style={styles.historyMetricLabel}>Fiber (g)</Text>
+                        <Text style={styles.historyMetricNote}>
+                          Supports digestive health and proper rumen function
+                        </Text>
+                      </View>
                     </View>
-                    <View style={[styles.tableCell, styles.tableCellNumeric]}>
-                      <Text style={styles.tableCellValue}>{entry.calciumGrams || 0}</Text>
-                      <Text style={styles.tableCellUnit}>g</Text>
-                    </View>
-                    <View style={[styles.tableCell, styles.tableCellAction]}>
-                      <Pressable
-                        style={styles.tableDeleteButton}
-                        onPress={() => entry.id && handleDelete(entry.id, entry.cattleName)}
-                        disabled={deleting === entry.id}
-                      >
-                        {deleting === entry.id ? (
-                          <ActivityIndicator size="small" color="#EF4444" />
-                        ) : (
-                          <Ionicons name="trash-outline" size={18} color="#EF4444" />
-                        )}
-                      </Pressable>
+                    
+                    <View style={styles.historyMetricItem}>
+                      <Ionicons name="shield-checkmark" size={18} color="#3B82F6" />
+                      <View style={styles.historyMetricContent}>
+                        <Text style={styles.historyMetricValue}>{entry.calciumGrams || 0}</Text>
+                        <Text style={styles.historyMetricLabel}>Calcium (g)</Text>
+                        <Text style={styles.historyMetricNote}>
+                          Critical for bone strength, milk production, and muscle function
+                        </Text>
+                      </View>
                     </View>
                   </View>
-                ))}
-              </View>
-            </ScrollView>
+                  
+                  {entry.minerals && (
+                    <View style={styles.historyCardMinerals}>
+                      <Ionicons name="information-circle-outline" size={16} color="#64748B" />
+                      <View style={styles.historyCardMineralsContent}>
+                        <Text style={styles.historyCardMineralsLabel}>Minerals & Supplements</Text>
+                        <Text style={styles.historyCardMineralsText}>{entry.minerals}</Text>
+                      </View>
+                    </View>
+                  )}
+                  
+                  {entry.type === 'horse' && (
+                    <View style={styles.historyCardNutritionalSummary}>
+                      <View style={styles.historyCardNutritionalSummaryHeader}>
+                        <Ionicons name="information-circle" size={20} color="#D97706" />
+                        <Text style={styles.historyCardNutritionalSummaryTitle}>Summary of Nutritional Needs</Text>
+                      </View>
+                      <Text style={styles.historyCardNutritionalSummaryIntro}>
+                        For Indian horses (350-450 kg) with moderate work levels, typical daily nutritional requirements are as follows:
+                      </Text>
+                      <View style={styles.historyCardNutritionalSummaryList}>
+                        <Text style={styles.historyCardNutritionalSummaryItem}>
+                          • <Text style={styles.historyCardNutritionalSummaryBold}>Calories:</Text> 16,000-22,000 kcal/day
+                        </Text>
+                        <Text style={styles.historyCardNutritionalSummaryItem}>
+                          • <Text style={styles.historyCardNutritionalSummaryBold}>Fiber:</Text> 25-30% of diet (5-7 kg)
+                        </Text>
+                        <Text style={styles.historyCardNutritionalSummaryItem}>
+                          • <Text style={styles.historyCardNutritionalSummaryBold}>Protein:</Text> 8-12% of diet (1-1.5 kg)
+                        </Text>
+                        <Text style={styles.historyCardNutritionalSummaryItem}>
+                          • <Text style={styles.historyCardNutritionalSummaryBold}>Carbohydrates:</Text> 50-60% of diet
+                        </Text>
+                        <Text style={styles.historyCardNutritionalSummaryItem}>
+                          • <Text style={styles.historyCardNutritionalSummaryBold}>Fat:</Text> 2-5% of diet (energy-dense feeds like oilseed cakes may help)
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              ))}
+            </View>
           )}
         </SectionCard>
 
@@ -536,29 +596,161 @@ const styles = StyleSheet.create({
     color: '#DC2626',
     marginTop: 6,
   },
+  historyCardsContainer: {
+    gap: 16,
+  },
   historyCard: {
-    borderWidth: 1,
-    borderColor: '#E0E7FF',
+    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 16,
-    marginBottom: 12,
-    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E0E7FF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  historyHeader: {
+  historyCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E7FF',
   },
-  historyName: {
+  historyCardHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+  },
+  historyCardIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#F0F9FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  historyCardTitleSection: {
+    flex: 1,
+  },
+  historyCardTitle: {
     fontSize: 16,
     fontWeight: '700',
     color: '#1E1B4B',
+    marginBottom: 4,
   },
-  historyMeta: {
-    color: '#4338CA',
+  historyCardMeta: {
+    fontSize: 12,
+    color: '#64748B',
+  },
+  historyCardDeleteButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#FEE2E2',
+  },
+  historyCardMetrics: {
+    gap: 12,
+    marginBottom: 12,
+  },
+  historyMetricItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 14,
+  },
+  historyMetricContent: {
+    flex: 1,
+  },
+  historyMetricValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1E1B4B',
+    marginBottom: 4,
+  },
+  historyMetricLabel: {
     fontSize: 13,
-    marginTop: 4,
+    color: '#64748B',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  historyMetricNote: {
+    fontSize: 11,
+    color: '#94A3B8',
+    lineHeight: 16,
+    fontStyle: 'italic',
+  },
+  historyCardMinerals: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    backgroundColor: '#FEF3C7',
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#FCD34D',
+  },
+  historyCardMineralsContent: {
+    flex: 1,
+  },
+  historyCardMineralsLabel: {
+    fontSize: 12,
+    color: '#92400E',
+    fontWeight: '600',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  historyCardMineralsText: {
+    fontSize: 13,
+    color: '#92400E',
+    fontWeight: '500',
+    lineHeight: 18,
+  },
+  historyCardNutritionalSummary: {
+    backgroundColor: '#FFFBEB',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#FCD34D',
+    borderLeftWidth: 4,
+    borderLeftColor: '#D97706',
+  },
+  historyCardNutritionalSummaryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  historyCardNutritionalSummaryTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#92400E',
+  },
+  historyCardNutritionalSummaryIntro: {
+    fontSize: 13,
+    color: '#78350F',
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  historyCardNutritionalSummaryList: {
+    gap: 8,
+  },
+  historyCardNutritionalSummaryItem: {
+    fontSize: 13,
+    color: '#78350F',
+    lineHeight: 20,
+  },
+  historyCardNutritionalSummaryBold: {
+    fontWeight: '700',
+    color: '#92400E',
   },
   deleteButton: {
     padding: 8,

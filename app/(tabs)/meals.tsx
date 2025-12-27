@@ -49,6 +49,8 @@ type RecipeType = {
   feedingTime: string;
   icon: keyof typeof Ionicons.glyphMap;
   animalType: 'cow' | 'horse';
+  availability?: string;
+  notes?: string;
 };
 
 // Pre-defined recipes for Cows - 2-3 recipes per diet focus
@@ -204,6 +206,8 @@ const horseRecipes: RecipeType[] = [
     feedingTime: 'Monsoon-rainy season',
     icon: 'leaf-outline',
     animalType: 'horse',
+    availability: 'Monsoon-rainy',
+    notes: 'High fiber, low energy',
   },
   {
     id: 'horse-raj-2',
@@ -215,6 +219,8 @@ const horseRecipes: RecipeType[] = [
     feedingTime: 'Post-monsoon season',
     icon: 'flash-outline',
     animalType: 'horse',
+    availability: 'Post-monsoon',
+    notes: 'High-energy, supports work',
   },
   {
     id: 'horse-raj-3',
@@ -226,6 +232,8 @@ const horseRecipes: RecipeType[] = [
     feedingTime: 'Year-round',
     icon: 'nutrition-outline',
     animalType: 'horse',
+    availability: 'Year-round',
+    notes: 'Protein/fiber supplement',
   },
   // PUNJAB
   {
@@ -238,6 +246,8 @@ const horseRecipes: RecipeType[] = [
     feedingTime: 'Year-round',
     icon: 'fitness-outline',
     animalType: 'horse',
+    availability: 'Year-round',
+    notes: 'Low energy; bulk only',
   },
   {
     id: 'horse-pun-2',
@@ -249,6 +259,8 @@ const horseRecipes: RecipeType[] = [
     feedingTime: 'Year-round',
     icon: 'flash-outline',
     animalType: 'horse',
+    availability: 'Year-round',
+    notes: 'Good energy, protein source',
   },
   {
     id: 'horse-pun-3',
@@ -260,6 +272,8 @@ const horseRecipes: RecipeType[] = [
     feedingTime: 'Year-round',
     icon: 'trending-up-outline',
     animalType: 'horse',
+    availability: 'Year-round',
+    notes: 'Excellent quality forage',
   },
   // GUJARAT
   {
@@ -272,6 +286,8 @@ const horseRecipes: RecipeType[] = [
     feedingTime: 'Kharif season',
     icon: 'flash-outline',
     animalType: 'horse',
+    availability: 'Kharif',
+    notes: 'Staple high-energy grain',
   },
   {
     id: 'horse-guj-2',
@@ -283,6 +299,8 @@ const horseRecipes: RecipeType[] = [
     feedingTime: 'Year-round',
     icon: 'trending-up-outline',
     animalType: 'horse',
+    availability: 'Year-round',
+    notes: 'Protein-rich supplement',
   },
   {
     id: 'horse-guj-3',
@@ -294,6 +312,8 @@ const horseRecipes: RecipeType[] = [
     feedingTime: 'Monsoon season',
     icon: 'leaf-outline',
     animalType: 'horse',
+    availability: 'Monsoon',
+    notes: 'Legume fodder, adds protein',
   },
   // MAHARASHTRA
   {
@@ -306,6 +326,8 @@ const horseRecipes: RecipeType[] = [
     feedingTime: 'Kharif season',
     icon: 'flash-outline',
     animalType: 'horse',
+    availability: 'Kharif',
+    notes: 'Common energy grain in region',
   },
   {
     id: 'horse-mah-2',
@@ -317,6 +339,8 @@ const horseRecipes: RecipeType[] = [
     feedingTime: 'Year-round',
     icon: 'trending-up-outline',
     animalType: 'horse',
+    availability: 'Year-round',
+    notes: 'High protein supplement',
   },
   {
     id: 'horse-mah-3',
@@ -328,6 +352,8 @@ const horseRecipes: RecipeType[] = [
     feedingTime: 'Post-harvest season',
     icon: 'fitness-outline',
     animalType: 'horse',
+    availability: 'Post-harvest',
+    notes: 'Low-quality roughage',
   },
 ];
 
@@ -727,25 +753,26 @@ export default function MealsScreen() {
                   <Tag label={`${cowRecipes.length}`} tone="primary" />
                 </View>
                 <ScrollView 
-                  horizontal 
-                  showsHorizontalScrollIndicator={false} 
-                  style={styles.recipeScroll}
-                  contentContainerStyle={styles.recipeScrollContent}
+                  showsVerticalScrollIndicator={false} 
+                  style={styles.recipeScrollVertical}
+                  contentContainerStyle={styles.recipeScrollContentVertical}
                 >
-                  {cowRecipes.map((recipe) => (
-                    <Pressable key={recipe.id} style={styles.recipeCard} onPress={() => openRecipe(recipe)}>
-                      <View style={styles.recipeIconWrap}>
-                        <Ionicons name={recipe.icon} size={28} color="#0a7ea4" />
-                      </View>
-                      <Text style={styles.recipeName} numberOfLines={2}>{recipe.name}</Text>
-                      <Text style={styles.recipeCalories}>{recipe.calories} kcal</Text>
-                      <View style={[styles.recipeDietBadge, { backgroundColor: `${getDietColor(recipe.dietType)}15` }]}>
-                        <Text style={[styles.recipeDietText, { color: getDietColor(recipe.dietType) }]}>
-                          {recipe.dietType}
-                        </Text>
-                      </View>
-                    </Pressable>
-                  ))}
+                  <View style={styles.recipeGrid}>
+                    {cowRecipes.map((recipe) => (
+                      <Pressable key={recipe.id} style={styles.recipeCard} onPress={() => openRecipe(recipe)}>
+                        <View style={styles.recipeIconWrap}>
+                          <Ionicons name={recipe.icon} size={28} color="#0a7ea4" />
+                        </View>
+                        <Text style={styles.recipeName} numberOfLines={2}>{recipe.name}</Text>
+                        <Text style={styles.recipeCalories}>{recipe.calories} kcal</Text>
+                        <View style={[styles.recipeDietBadge, { backgroundColor: `${getDietColor(recipe.dietType)}15` }]}>
+                          <Text style={[styles.recipeDietText, { color: getDietColor(recipe.dietType) }]}>
+                            {recipe.dietType}
+                          </Text>
+                        </View>
+                      </Pressable>
+                    ))}
+                  </View>
                 </ScrollView>
               </View>
             ) : (
@@ -770,6 +797,18 @@ export default function MealsScreen() {
                           {recipe.dietType}
                         </Text>
                       </View>
+                      {recipe.availability && (
+                        <View style={styles.recipeAvailability}>
+                          <Ionicons name="calendar-outline" size={12} color="#64748B" />
+                          <Text style={styles.recipeAvailabilityText}>{recipe.availability}</Text>
+                        </View>
+                      )}
+                      {recipe.notes && (
+                        <View style={styles.recipeNotes}>
+                          <Ionicons name="information-circle-outline" size={12} color="#D97706" />
+                          <Text style={styles.recipeNotesText} numberOfLines={2}>{recipe.notes}</Text>
+                        </View>
+                      )}
                     </Pressable>
                   ))}
                 </View>
@@ -1049,6 +1088,26 @@ export default function MealsScreen() {
                     <Text style={styles.recipeDetailText}>{selectedRecipe.nutrition}</Text>
                   </View>
 
+                  {selectedRecipe.animalType === 'horse' && selectedRecipe.availability && (
+                    <View style={styles.recipeDetailSection}>
+                      <View style={styles.recipeDetailHeader}>
+                        <Ionicons name="calendar-outline" size={18} color="#64748B" />
+                        <Text style={styles.recipeDetailLabel}>Availability</Text>
+                      </View>
+                      <Text style={styles.recipeDetailText}>{selectedRecipe.availability}</Text>
+                    </View>
+                  )}
+
+                  {selectedRecipe.animalType === 'horse' && selectedRecipe.notes && (
+                    <View style={styles.recipeDetailSection}>
+                      <View style={styles.recipeDetailHeader}>
+                        <Ionicons name="information-circle-outline" size={18} color="#D97706" />
+                        <Text style={styles.recipeDetailLabel}>Notes</Text>
+                      </View>
+                      <Text style={styles.recipeDetailText}>{selectedRecipe.notes}</Text>
+                    </View>
+                  )}
+
                   {selectedRecipe.animalType === 'horse' && (
                     <View style={styles.nutritionalSummarySection}>
                       <View style={styles.nutritionalSummaryHeader}>
@@ -1303,6 +1362,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#0a7ea4',
   },
+  recipeScrollVertical: {
+    maxHeight: 600,
+  },
+  recipeScrollContentVertical: {
+    paddingBottom: 8,
+  },
   recipeGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1355,6 +1420,33 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     textTransform: 'capitalize',
+  },
+  recipeAvailability: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
+  recipeAvailabilityText: {
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  recipeNotes: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 4,
+    marginTop: 6,
+  },
+  recipeNotesText: {
+    fontSize: 10,
+    color: '#92400E',
+    fontWeight: '500',
+    flex: 1,
+    lineHeight: 14,
   },
   modalSafe: {
     flex: 1,
