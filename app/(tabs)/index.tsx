@@ -19,6 +19,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { FormField } from '@/components/ui/form-field';
 import { Tag } from '@/components/ui/tag';
+import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSelectedCattle } from '@/contexts/SelectedCattleContext';
 import { useUserCollection } from '@/hooks/use-user-collection';
@@ -77,7 +78,7 @@ export default function HerdHomeScreen() {
   const [previousFemaleStatus, setPreviousFemaleStatus] = useState<'pregnant' | 'notPregnant' | 'lactating' | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState('');
-  
+
   // Pregnancy form state
   const [showPregnancyFormModal, setShowPregnancyFormModal] = useState(false);
   const [pregnancyForm, setPregnancyForm] = useState({
@@ -95,7 +96,7 @@ export default function HerdHomeScreen() {
     if (!editingId) return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']; // Default to cow
     const editingCattle = cattle.find(c => c.id === editingId);
     const cattleType = editingCattle?.type || 'cow';
-    return cattleType === 'cow' 
+    return cattleType === 'cow'
       ? ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep']
       : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   }, [editingId, cattle]);
@@ -205,9 +206,9 @@ export default function HerdHomeScreen() {
     if (pregnancyForm.dueDate) {
       try {
         const date = new Date(pregnancyForm.dueDate);
-      setSelectedYear(date.getFullYear());
-      setSelectedMonth(date.getMonth());
-      setSelectedDay(date.getDate());
+        setSelectedYear(date.getFullYear());
+        setSelectedMonth(date.getMonth());
+        setSelectedDay(date.getDate());
       } catch {
         // Use defaults
       }
@@ -222,20 +223,20 @@ export default function HerdHomeScreen() {
   // For horses (12 months): Early: 0-4, Mid: 4-8, Late: 8-12
   const calculateBlockedMonthsForTrimester = (dueDateStr: string, trimester: 'early' | 'mid' | 'late', cattleType: 'cow' | 'horse'): string[] => {
     if (!dueDateStr) return [];
-    
+
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    
+
     try {
       // dueDateStr is actually the pregnancy date
       const pregnancyDate = new Date(dueDateStr);
-      
+
       // Determine month range based on trimester and cattle type
       // The pregnancy month itself counts as month 1
       // For cows (9 months): Early: months 1-3 (0-2 offset), Mid: months 4-6 (3-5 offset), Late: months 7-9 (6-8 offset)
       // For horses (12 months): Early: months 1-4 (0-3 offset), Mid: months 5-8 (4-7 offset), Late: months 9-12 (8-11 offset)
       let startMonthOffset = 0;
       let endMonthOffset = cattleType === 'cow' ? 3 : 4; // End is exclusive
-      
+
       if (trimester === 'mid') {
         startMonthOffset = cattleType === 'cow' ? 3 : 4;
         endMonthOffset = cattleType === 'cow' ? 6 : 8;
@@ -243,9 +244,9 @@ export default function HerdHomeScreen() {
         startMonthOffset = cattleType === 'cow' ? 6 : 8;
         endMonthOffset = cattleType === 'cow' ? 9 : 12;
       }
-      
+
       const blockedMonths: string[] = [];
-      
+
       // Calculate blocked months starting from pregnancy date
       for (let i = startMonthOffset; i < endMonthOffset; i++) {
         const monthDate = new Date(pregnancyDate);
@@ -255,7 +256,7 @@ export default function HerdHomeScreen() {
           blockedMonths.push(monthName);
         }
       }
-      
+
       return blockedMonths;
     } catch {
       return [];
@@ -308,15 +309,15 @@ export default function HerdHomeScreen() {
         blockedMonths: [],
       });
       setShowPregnancyFormModal(false);
-      
+
       // Close edit modal if it was open
       if (showEditModal) {
-      resetForm();
+        resetForm();
         setShowEditModal(false);
         setEditingId(null);
         setPreviousFemaleStatus(null);
       }
-      
+
       Alert.alert('Success! ✅', 'Pregnancy plan has been created.');
     } catch (err) {
       console.error(err);
@@ -381,7 +382,7 @@ export default function HerdHomeScreen() {
         currentFemaleStatus: form.femaleStatus,
         sex: form.sex
       });
-      
+
       const profileData: any = {
         name: cattleName,
         type: form.type,
@@ -396,18 +397,18 @@ export default function HerdHomeScreen() {
         activityLevel: form.activityLevel,
         climateRegion: form.climateRegion,
       };
-      
+
       // Only include femaleStatus if sex is female
       if (form.sex === 'female') {
         console.log('✅ Sex is female, checking pregnancy status changes...');
         profileData.femaleStatus = form.femaleStatus;
-        
+
         // Handle pregnancy status changes
         const wasPregnant = previousFemaleStatus === 'pregnant';
         const wasNotPregnantOrLactating = previousFemaleStatus === 'notPregnant' || previousFemaleStatus === 'lactating' || previousFemaleStatus === null;
         const isNowPregnant = form.femaleStatus === 'pregnant';
         const isNowNotPregnantOrLactating = form.femaleStatus === 'notPregnant' || form.femaleStatus === 'lactating';
-        
+
         console.log('Pregnancy status change check:', {
           previousFemaleStatus,
           currentFemaleStatus: form.femaleStatus,
@@ -418,16 +419,16 @@ export default function HerdHomeScreen() {
           plansForThisCattle: pregnancyPlans.filter(p => p.cattleId === editingId).length,
           allPlans: pregnancyPlans.map(p => ({ id: p.id, cattleId: p.cattleId, completed: p.completed }))
         });
-        
+
         // If changing from pregnant to not pregnant/lactating, mark pregnancy plans as completed
         if (wasPregnant && isNowNotPregnantOrLactating) {
           console.log('✅ Condition met: Marking pregnancy plans as completed');
           const activePregnancyPlans = pregnancyPlans.filter(
             (p) => {
-              const matches = p.cattleId === editingId && 
-                             (p.completed === undefined || p.completed === false || !p.completed) && 
-                             !p.todo && 
-                             !p.calendarDate;
+              const matches = p.cattleId === editingId &&
+                (p.completed === undefined || p.completed === false || !p.completed) &&
+                !p.todo &&
+                !p.calendarDate;
               return matches;
             }
           );
@@ -437,11 +438,11 @@ export default function HerdHomeScreen() {
             allPlansForCattle: pregnancyPlans.filter(p => p.cattleId === editingId).length,
             activePlans: activePregnancyPlans.map(p => ({ id: p.id, completed: p.completed, todo: p.todo, calendarDate: p.calendarDate }))
           });
-          
+
           if (activePregnancyPlans.length === 0) {
             console.warn('No active pregnancy plans found to mark as completed');
           }
-          
+
           for (const plan of activePregnancyPlans) {
             if (plan.id) {
               try {
@@ -462,14 +463,14 @@ export default function HerdHomeScreen() {
             currentFemaleStatus: form.femaleStatus
           });
         }
-        
+
         // If changing from not pregnant/lactating to pregnant, show pregnancy form modal
         if (wasNotPregnantOrLactating && isNowPregnant) {
           // Check if there's already an active pregnancy plan
           const hasActivePlan = pregnancyPlans.some(
             (p) => p.cattleId === editingId && !p.completed && !p.todo && !p.calendarDate
           );
-          
+
           if (!hasActivePlan) {
             console.log('Opening pregnancy form modal for new pregnancy');
             // Reset pregnancy form and show modal
@@ -486,11 +487,11 @@ export default function HerdHomeScreen() {
         // Remove femaleStatus if sex is male
         profileData.femaleStatus = undefined;
       }
-      
+
       console.log('Updating profile:', { editingId, profileData });
       await updateUserDocument(user.uid, 'cattle', editingId, profileData);
       console.log('Profile updated successfully');
-      
+
       // Update selectedCattle if it's the one being edited
       if (selectedCattle && selectedCattle.id === editingId) {
         const updatedCattle = {
@@ -499,15 +500,15 @@ export default function HerdHomeScreen() {
         };
         await setSelectedCattle(updatedCattle);
       }
-      
+
       resetForm();
       setShowEditModal(false);
       setEditingId(null);
       setPreviousFemaleStatus(null);
-      
+
       // Only show success alert if we're not opening pregnancy form
       if (!(form.sex === 'female' && form.femaleStatus === 'pregnant' && previousFemaleStatus !== 'pregnant')) {
-      Alert.alert('Updated! ✅', `${cattleName}'s profile has been updated.`);
+        Alert.alert('Updated! ✅', `${cattleName}'s profile has been updated.`);
       }
     } catch (err) {
       console.error('Update error:', err);
@@ -553,8 +554,8 @@ export default function HerdHomeScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <ScrollView 
-        contentContainerStyle={styles.content} 
+      <ScrollView
+        contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
@@ -586,7 +587,7 @@ export default function HerdHomeScreen() {
         {/* Loading State */}
         {loading && (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#0a7ea4" />
+            <ActivityIndicator size="large" color={AppColors.primary} />
             <Text style={styles.loadingText}>Loading profile...</Text>
           </View>
         )}
@@ -596,7 +597,7 @@ export default function HerdHomeScreen() {
           <>
             <View style={styles.profileDetailCard}>
               <Pressable style={styles.profileCardContent} onPress={() => setSelected(selectedCattle)}>
-                <View style={[styles.profileAvatar, { backgroundColor: selectedCattle.type === 'cow' ? '#E0F2FE' : '#FEF3C7' }]}>
+                <View style={[styles.profileAvatar, { backgroundColor: selectedCattle.type === 'cow' ? '#E8EFE9' : '#F5F1E6' }]}>
                   <Text style={styles.avatarEmoji}>{getCattleIcon(selectedCattle.type)}</Text>
                 </View>
                 <View style={styles.profileInfo}>
@@ -608,7 +609,7 @@ export default function HerdHomeScreen() {
                   ) : null}
                   <View style={styles.profileMeta}>
                     <View style={styles.metaItem}>
-                      <Ionicons name={selectedCattle.sex === 'male' ? 'male' : 'female'} size={16} color="#64748B" />
+                      <Ionicons name={selectedCattle.sex === 'male' ? 'male' : 'female'} size={16} color={AppColors.subtleText} />
                       <Text style={styles.metaText}>{selectedCattle.sex === 'male' ? '♂ Male' : '♀ Female'}</Text>
                     </View>
                     {selectedCattle.sex === 'female' && selectedCattle.femaleStatus && (
@@ -623,13 +624,13 @@ export default function HerdHomeScreen() {
                       </View>
                     )}
                     <View style={styles.metaItem}>
-                      <Ionicons name="scale-outline" size={16} color="#64748B" />
+                      <Ionicons name="scale-outline" size={16} color={AppColors.subtleText} />
                       <Text style={styles.metaText}>
                         {selectedCattle.weightValue ? `${selectedCattle.weightValue} ${selectedCattle.weightUnit || 'kg'}` : '—'}
                       </Text>
                     </View>
                     <View style={styles.metaItem}>
-                      <Ionicons name="calendar-outline" size={16} color="#64748B" />
+                      <Ionicons name="calendar-outline" size={16} color={AppColors.subtleText} />
                       <Text style={styles.metaText}>{selectedCattle.ageYears || '—'} yrs</Text>
                     </View>
                     {selectedCattle.vaccinated && (
@@ -643,7 +644,7 @@ export default function HerdHomeScreen() {
               </Pressable>
               <View style={styles.cardActions}>
                 <Pressable style={styles.actionButton} onPress={() => openEditModal(selectedCattle)}>
-                  <Ionicons name="create-outline" size={20} color="#0a7ea4" />
+                  <Ionicons name="create-outline" size={20} color={AppColors.primary} />
                 </Pressable>
               </View>
             </View>
@@ -652,16 +653,16 @@ export default function HerdHomeScreen() {
             <View style={styles.quickActionsSection}>
               <Text style={styles.sectionTitle}>Quick Actions</Text>
               <View style={styles.quickActionsGrid}>
-                <Pressable 
+                <Pressable
                   style={styles.quickActionCard}
                   onPress={() => router.push('/(tabs)/calculator')}
                 >
-                  <View style={[styles.quickActionIcon, { backgroundColor: '#E0F2FE' }]}>
-                    <Ionicons name="calculator-outline" size={24} color="#0a7ea4" />
+                  <View style={[styles.quickActionIcon, { backgroundColor: '#E8EFE9' }]}>
+                    <Ionicons name="calculator-outline" size={24} color={AppColors.primary} />
                   </View>
                   <Text style={styles.quickActionText}>Calculate Nutrition</Text>
                 </Pressable>
-                <Pressable 
+                <Pressable
                   style={styles.quickActionCard}
                   onPress={() => router.push('/(tabs)/meals')}
                 >
@@ -670,7 +671,7 @@ export default function HerdHomeScreen() {
                   </View>
                   <Text style={styles.quickActionText}>Create Meal Plan</Text>
                 </Pressable>
-                <Pressable 
+                <Pressable
                   style={styles.quickActionCard}
                   onPress={() => router.push('/(tabs)/progress')}
                 >
@@ -679,7 +680,7 @@ export default function HerdHomeScreen() {
                   </View>
                   <Text style={styles.quickActionText}>Log Progress</Text>
                 </Pressable>
-                <Pressable 
+                <Pressable
                   style={styles.quickActionCard}
                   onPress={() => router.push('/(tabs)/pregnancy')}
                 >
@@ -695,54 +696,54 @@ export default function HerdHomeScreen() {
             <View style={styles.detailsSection}>
               <Text style={styles.sectionTitle}>Profile Details</Text>
               <View style={styles.detailsCard}>
-                <DetailRow 
-                  icon="pricetag-outline" 
-                  label="Breed" 
-                  value={selectedCattle.breed || 'Not specified'} 
+                <DetailRow
+                  icon="pricetag-outline"
+                  label="Breed"
+                  value={selectedCattle.breed || 'Not specified'}
                 />
-                <DetailRow 
-                  icon="scale-outline" 
-                  label="Weight" 
-                  value={selectedCattle.weightValue ? `${selectedCattle.weightValue} ${selectedCattle.weightUnit || 'kg'}` : 'Not specified'} 
+                <DetailRow
+                  icon="scale-outline"
+                  label="Weight"
+                  value={selectedCattle.weightValue ? `${selectedCattle.weightValue} ${selectedCattle.weightUnit || 'kg'}` : 'Not specified'}
                 />
-                <DetailRow 
-                  icon="resize-outline" 
-                  label="Height" 
-                  value={selectedCattle.heightValue ? `${selectedCattle.heightValue} ${selectedCattle.heightUnit || 'cm'}` : 'Not specified'} 
+                <DetailRow
+                  icon="resize-outline"
+                  label="Height"
+                  value={selectedCattle.heightValue ? `${selectedCattle.heightValue} ${selectedCattle.heightUnit || 'cm'}` : 'Not specified'}
                 />
-                <DetailRow 
-                  icon="calendar-outline" 
-                  label="Age" 
-                  value={selectedCattle.ageYears ? `${selectedCattle.ageYears} years` : 'Not specified'} 
+                <DetailRow
+                  icon="calendar-outline"
+                  label="Age"
+                  value={selectedCattle.ageYears ? `${selectedCattle.ageYears} years` : 'Not specified'}
                 />
-                <DetailRow 
-                  icon={selectedCattle.sex === 'male' ? 'male' : 'female'} 
-                  label="Gender" 
-                  value={selectedCattle.sex === 'male' ? '♂ Male' : '♀ Female'} 
+                <DetailRow
+                  icon={selectedCattle.sex === 'male' ? 'male' : 'female'}
+                  label="Gender"
+                  value={selectedCattle.sex === 'male' ? '♂ Male' : '♀ Female'}
                 />
                 {selectedCattle.sex === 'female' && selectedCattle.femaleStatus && (
-                  <DetailRow 
-                    icon="heart-outline" 
-                    label="Female Status" 
-                    value={selectedCattle.femaleStatus === 'pregnant' ? '🤰 Pregnant' : selectedCattle.femaleStatus === 'lactating' ? '🥛 Lactating' : 'Not Pregnant'} 
+                  <DetailRow
+                    icon="heart-outline"
+                    label="Female Status"
+                    value={selectedCattle.femaleStatus === 'pregnant' ? '🤰 Pregnant' : selectedCattle.femaleStatus === 'lactating' ? '🥛 Lactating' : 'Not Pregnant'}
                   />
                 )}
-                <DetailRow 
-                  icon="barbell-outline" 
-                  label="Activity Level" 
-                  value={selectedCattle.activityLevel ? (selectedCattle.activityLevel === 'maintenance' ? 'Maintenance' : selectedCattle.activityLevel === 'lightWork' ? 'Light Work' : selectedCattle.activityLevel === 'moderateWork' ? 'Moderate Work' : 'Heavy Work') : 'Not specified'} 
+                <DetailRow
+                  icon="barbell-outline"
+                  label="Activity Level"
+                  value={selectedCattle.activityLevel ? (selectedCattle.activityLevel === 'maintenance' ? 'Maintenance' : selectedCattle.activityLevel === 'lightWork' ? 'Light Work' : selectedCattle.activityLevel === 'moderateWork' ? 'Moderate Work' : 'Heavy Work') : 'Not specified'}
                 />
                 {selectedCattle.climateRegion && (
-                  <DetailRow 
-                    icon="location-outline" 
-                    label="Climate Region" 
-                    value={selectedCattle.climateRegion} 
+                  <DetailRow
+                    icon="location-outline"
+                    label="Climate Region"
+                    value={selectedCattle.climateRegion}
                   />
                 )}
-                <DetailRow 
-                  icon="shield-checkmark-outline" 
-                  label="Vaccinated" 
-                  value={selectedCattle.vaccinated ? 'Yes ✓' : 'No'} 
+                <DetailRow
+                  icon="shield-checkmark-outline"
+                  label="Vaccinated"
+                  value={selectedCattle.vaccinated ? 'Yes ✓' : 'No'}
                 />
               </View>
             </View>
@@ -804,7 +805,7 @@ export default function HerdHomeScreen() {
                         style={[styles.toggleChip, form.sex === sex && styles.toggleChipActive]}
                         onPress={() => handleChange('sex', sex)}
                       >
-                        <Text 
+                        <Text
                           style={[styles.toggleText, form.sex === sex && styles.toggleTextActive]}
                           numberOfLines={1}
                         >
@@ -863,8 +864,8 @@ export default function HerdHomeScreen() {
                           >
                             <Text style={[styles.toggleTextSmall, form.heightUnit === unit && styles.toggleTextActive]}>
                               {unit.toUpperCase()}
-                        </Text>
-                      </Pressable>
+                            </Text>
+                          </Pressable>
                         ))}
                       </View>
                     </View>
@@ -872,20 +873,20 @@ export default function HerdHomeScreen() {
                 </View>
 
                 {form.sex === 'female' && (
-                <View style={styles.formSection}>
+                  <View style={styles.formSection}>
                     <Text style={styles.formSectionTitle}>Female Status</Text>
                     <View style={styles.toggleRow}>
                       {(['pregnant', 'notPregnant', 'lactating'] as const).map((status) => (
                         <Pressable
                           key={status}
                           style={[
-                            styles.toggleChip, 
+                            styles.toggleChip,
                             styles.toggleChipResponsive,
                             form.femaleStatus === status && styles.toggleChipActive
                           ]}
                           onPress={() => handleChange('femaleStatus', status)}
                         >
-                          <Text 
+                          <Text
                             style={[styles.toggleText, form.femaleStatus === status && styles.toggleTextActive]}
                             numberOfLines={1}
                             adjustsFontSizeToFit
@@ -906,13 +907,13 @@ export default function HerdHomeScreen() {
                       <Pressable
                         key={level}
                         style={[
-                          styles.toggleChip, 
+                          styles.toggleChip,
                           styles.toggleChipResponsive,
                           form.activityLevel === level && styles.toggleChipActive
                         ]}
                         onPress={() => handleChange('activityLevel', level)}
                       >
-                        <Text 
+                        <Text
                           style={[styles.toggleText, form.activityLevel === level && styles.toggleTextActive]}
                           numberOfLines={1}
                           adjustsFontSizeToFit
@@ -970,37 +971,37 @@ export default function HerdHomeScreen() {
                 </Pressable>
               </ScrollView>
             ) : (
-            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-              <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-                <View style={styles.modalHeader}>
-                  <Pressable style={styles.closeButton} onPress={() => { setShowEditModal(false); resetForm(); setEditingId(null); }}>
-                    <Ionicons name="close" size={24} color="#64748B" />
-                  </Pressable>
-                  <Text style={styles.modalTitle}>Edit Profile</Text>
-                  <View style={{ width: 40 }} />
-                </View>
-
-                {/* Type Toggle */}
-                <View style={styles.toggleRow}>
-                  {(['cow', 'horse'] as CattleCategory[]).map((type) => (
-                    <Pressable
-                      key={type}
-                      style={[styles.toggleChip, form.type === type && styles.toggleChipActive]}
-                      onPress={() => handleChange('type', type)}
-                    >
-                      <Text style={styles.toggleEmoji}>{type === 'cow' ? '🐄' : '🐴'}</Text>
-                      <Text style={[styles.toggleText, form.type === type && styles.toggleTextActive]}>
-                        {type === 'cow' ? 'Cow' : 'Horse'}
-                      </Text>
+              <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+                <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                  <View style={styles.modalHeader}>
+                    <Pressable style={styles.closeButton} onPress={() => { setShowEditModal(false); resetForm(); setEditingId(null); }}>
+                      <Ionicons name="close" size={24} color="#64748B" />
                     </Pressable>
-                  ))}
-                </View>
+                    <Text style={styles.modalTitle}>Edit Profile</Text>
+                    <View style={{ width: 40 }} />
+                  </View>
 
-                {/* Form Fields */}
-                <View style={styles.formSection}>
-                  <Text style={styles.formSectionTitle}>Basic Information</Text>
-                  <FormField label="Name" placeholder="Luna, Bolt..." value={form.name} onChangeText={(text) => handleChange('name', text)} />
-                  <FormField label="Breed" placeholder="Holstein Friesian" value={form.breed} onChangeText={(text) => handleChange('breed', text)} />
+                  {/* Type Toggle */}
+                  <View style={styles.toggleRow}>
+                    {(['cow', 'horse'] as CattleCategory[]).map((type) => (
+                      <Pressable
+                        key={type}
+                        style={[styles.toggleChip, form.type === type && styles.toggleChipActive]}
+                        onPress={() => handleChange('type', type)}
+                      >
+                        <Text style={styles.toggleEmoji}>{type === 'cow' ? '🐄' : '🐴'}</Text>
+                        <Text style={[styles.toggleText, form.type === type && styles.toggleTextActive]}>
+                          {type === 'cow' ? 'Cow' : 'Horse'}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+
+                  {/* Form Fields */}
+                  <View style={styles.formSection}>
+                    <Text style={styles.formSectionTitle}>Basic Information</Text>
+                    <FormField label="Name" placeholder="Luna, Bolt..." value={form.name} onChangeText={(text) => handleChange('name', text)} />
+                    <FormField label="Breed" placeholder="Holstein Friesian" value={form.breed} onChangeText={(text) => handleChange('breed', text)} />
                     <FormField
                       label="Age (years)"
                       placeholder="3"
@@ -1019,7 +1020,7 @@ export default function HerdHomeScreen() {
                           style={[styles.toggleChip, form.sex === sex && styles.toggleChipActive]}
                           onPress={() => handleChange('sex', sex)}
                         >
-                          <Text 
+                          <Text
                             style={[styles.toggleText, form.sex === sex && styles.toggleTextActive]}
                             numberOfLines={1}
                           >
@@ -1028,20 +1029,20 @@ export default function HerdHomeScreen() {
                         </Pressable>
                       ))}
                     </View>
-                </View>
+                  </View>
 
-                <View style={styles.formSection}>
-                  <Text style={styles.formSectionTitle}>Physical Details</Text>
-                  <View style={styles.row}>
-                    <FormField
+                  <View style={styles.formSection}>
+                    <Text style={styles.formSectionTitle}>Physical Details</Text>
+                    <View style={styles.row}>
+                      <FormField
                         label={`Body Weight (${form.weightUnit})`}
                         placeholder={form.weightUnit === 'kg' ? '550' : '1212'}
-                      keyboardType="numeric"
-                      style={{ flex: 1 }}
+                        keyboardType="numeric"
+                        style={{ flex: 1 }}
                         value={form.weightValue}
                         onChangeText={(text) => handleChange('weightValue', text)}
-                    />
-                    <View style={{ width: 12 }} />
+                      />
+                      <View style={{ width: 12 }} />
                       <View style={{ flex: 1, justifyContent: 'flex-end', paddingBottom: 12 }}>
                         <View style={styles.toggleRow}>
                           {(['kg', 'lbs'] as const).map((unit) => (
@@ -1057,17 +1058,17 @@ export default function HerdHomeScreen() {
                           ))}
                         </View>
                       </View>
-                  </View>
-                  <View style={styles.row}>
-                    <FormField
+                    </View>
+                    <View style={styles.row}>
+                      <FormField
                         label={`Height (${form.heightUnit === 'hands' ? 'hands' : 'cm'})`}
                         placeholder={form.heightUnit === 'hands' ? '15.2' : '160'}
-                      keyboardType="numeric"
-                      style={{ flex: 1 }}
+                        keyboardType="numeric"
+                        style={{ flex: 1 }}
                         value={form.heightValue}
                         onChangeText={(text) => handleChange('heightValue', text)}
-                    />
-                    <View style={{ width: 12 }} />
+                      />
+                      <View style={{ width: 12 }} />
                       <View style={{ flex: 1, justifyContent: 'flex-end', paddingBottom: 12 }}>
                         <View style={styles.toggleRow}>
                           {(['hands', 'cm'] as const).map((unit) => (
@@ -1078,29 +1079,29 @@ export default function HerdHomeScreen() {
                             >
                               <Text style={[styles.toggleTextSmall, form.heightUnit === unit && styles.toggleTextActive]}>
                                 {unit.toUpperCase()}
-                        </Text>
-                      </Pressable>
+                              </Text>
+                            </Pressable>
                           ))}
                         </View>
+                      </View>
                     </View>
                   </View>
-                </View>
 
                   {form.sex === 'female' && (
-                <View style={styles.formSection}>
+                    <View style={styles.formSection}>
                       <Text style={styles.formSectionTitle}>Female Status</Text>
                       <View style={styles.toggleRow}>
                         {(['pregnant', 'notPregnant', 'lactating'] as const).map((status) => (
                           <Pressable
                             key={status}
                             style={[
-                              styles.toggleChip, 
+                              styles.toggleChip,
                               styles.toggleChipResponsive,
                               form.femaleStatus === status && styles.toggleChipActive
                             ]}
                             onPress={() => handleChange('femaleStatus', status)}
                           >
-                            <Text 
+                            <Text
                               style={[styles.toggleText, form.femaleStatus === status && styles.toggleTextActive]}
                               numberOfLines={1}
                               adjustsFontSizeToFit
@@ -1121,13 +1122,13 @@ export default function HerdHomeScreen() {
                         <Pressable
                           key={level}
                           style={[
-                            styles.toggleChip, 
+                            styles.toggleChip,
                             styles.toggleChipResponsive,
                             form.activityLevel === level && styles.toggleChipActive
                           ]}
                           onPress={() => handleChange('activityLevel', level)}
                         >
-                          <Text 
+                          <Text
                             style={[styles.toggleText, form.activityLevel === level && styles.toggleTextActive]}
                             numberOfLines={1}
                             adjustsFontSizeToFit
@@ -1153,38 +1154,38 @@ export default function HerdHomeScreen() {
 
                   <View style={styles.formSection}>
                     <Text style={styles.formSectionTitle}>Care</Text>
-                  <View style={styles.switchRow}>
-                    <View style={styles.switchInfo}>
-                      <Ionicons name="shield-checkmark" size={20} color="#10B981" />
-                      <Text style={styles.switchLabel}>Vaccinated</Text>
+                    <View style={styles.switchRow}>
+                      <View style={styles.switchInfo}>
+                        <Ionicons name="shield-checkmark" size={20} color="#10B981" />
+                        <Text style={styles.switchLabel}>Vaccinated</Text>
+                      </View>
+                      <Switch
+                        value={form.vaccinated}
+                        onValueChange={(value) => handleChange('vaccinated', value)}
+                        trackColor={{ false: '#E2E8F0', true: '#A7F3D0' }}
+                        thumbColor={form.vaccinated ? '#10B981' : '#94A3B8'}
+                      />
                     </View>
-                    <Switch
-                      value={form.vaccinated}
-                      onValueChange={(value) => handleChange('vaccinated', value)}
-                      trackColor={{ false: '#E2E8F0', true: '#A7F3D0' }}
-                      thumbColor={form.vaccinated ? '#10B981' : '#94A3B8'}
-                    />
                   </View>
-                </View>
 
-                {error ? <Text style={styles.error}>{error}</Text> : null}
+                  {error ? <Text style={styles.error}>{error}</Text> : null}
 
-                <Pressable
-                  style={[styles.primaryButton, creating && { opacity: 0.6 }]}
-                  disabled={creating}
-                  onPress={handleUpdate}
-                >
-                  {creating ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <>
-                      <Ionicons name="checkmark-circle" size={20} color="#fff" />
-                      <Text style={styles.primaryText}>Update Profile</Text>
-                    </>
-                  )}
-                </Pressable>
-              </ScrollView>
-            </TouchableWithoutFeedback>
+                  <Pressable
+                    style={[styles.primaryButton, creating && { opacity: 0.6 }]}
+                    disabled={creating}
+                    onPress={handleUpdate}
+                  >
+                    {creating ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <>
+                        <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                        <Text style={styles.primaryText}>Update Profile</Text>
+                      </>
+                    )}
+                  </Pressable>
+                </ScrollView>
+              </TouchableWithoutFeedback>
             )}
           </KeyboardAvoidingView>
         </SafeAreaView>
@@ -1202,7 +1203,7 @@ export default function HerdHomeScreen() {
             </View>
             <ScrollView style={styles.pickerScrollView} showsVerticalScrollIndicator={false}>
               {climateRegions.map((region) => (
-                    <Pressable
+                <Pressable
                   key={region}
                   style={[styles.pickerOption, form.climateRegion === region && styles.pickerOptionSelected]}
                   onPress={() => {
@@ -1212,13 +1213,13 @@ export default function HerdHomeScreen() {
                 >
                   <Text style={[styles.pickerOptionText, form.climateRegion === region && styles.pickerOptionTextSelected]}>
                     {region}
-                      </Text>
+                  </Text>
                   {form.climateRegion === region && (
                     <Ionicons name="checkmark" size={20} color="#0a7ea4" />
                   )}
-                    </Pressable>
-                  ))}
-                </ScrollView>
+                </Pressable>
+              ))}
+            </ScrollView>
           </Pressable>
         </Pressable>
       </Modal>
@@ -1282,24 +1283,24 @@ export default function HerdHomeScreen() {
               <View style={styles.detailsList}>
                 <DetailItem icon="pricetag-outline" label="Breed" value={selected.breed || '—'} />
                 {selected.sex === 'female' && selected.femaleStatus && (
-                  <DetailItem 
-                    icon="heart-outline" 
-                    label="Female Status" 
-                    value={selected.femaleStatus === 'pregnant' ? '🤰 Pregnant' : selected.femaleStatus === 'lactating' ? '🥛 Lactating' : 'Not Pregnant'} 
+                  <DetailItem
+                    icon="heart-outline"
+                    label="Female Status"
+                    value={selected.femaleStatus === 'pregnant' ? '🤰 Pregnant' : selected.femaleStatus === 'lactating' ? '🥛 Lactating' : 'Not Pregnant'}
                   />
                 )}
-                <DetailItem 
-                  icon="barbell-outline" 
-                  label="Activity Level" 
-                  value={selected.activityLevel ? (selected.activityLevel === 'maintenance' ? 'Maintenance' : selected.activityLevel === 'lightWork' ? 'Light Work' : selected.activityLevel === 'moderateWork' ? 'Moderate Work' : 'Heavy Work') : '—'} 
+                <DetailItem
+                  icon="barbell-outline"
+                  label="Activity Level"
+                  value={selected.activityLevel ? (selected.activityLevel === 'maintenance' ? 'Maintenance' : selected.activityLevel === 'lightWork' ? 'Light Work' : selected.activityLevel === 'moderateWork' ? 'Moderate Work' : 'Heavy Work') : '—'}
                 />
                 {selected.climateRegion && (
                   <DetailItem icon="location-outline" label="Climate Region" value={selected.climateRegion} />
                 )}
-                <DetailItem 
-                  icon="shield-checkmark-outline" 
-                  label="Vaccinated" 
-                  value={selected.vaccinated ? 'Yes' : 'No'} 
+                <DetailItem
+                  icon="shield-checkmark-outline"
+                  label="Vaccinated"
+                  value={selected.vaccinated ? 'Yes' : 'No'}
                 />
               </View>
 
@@ -1309,8 +1310,8 @@ export default function HerdHomeScreen() {
                   <Ionicons name="create-outline" size={20} color="#fff" />
                   <Text style={styles.editButtonText}>Edit Profile</Text>
                 </Pressable>
-                <Pressable 
-                  style={styles.deleteButtonLarge} 
+                <Pressable
+                  style={styles.deleteButtonLarge}
                   onPress={() => handleDelete(selected)}
                   disabled={deleting === selected.id}
                 >
@@ -1445,17 +1446,17 @@ export default function HerdHomeScreen() {
                           key={trimester}
                           style={[styles.toggleChip, styles.toggleChipResponsive, pregnancyForm.trimester === trimester && styles.toggleChipActive]}
                           onPress={() => {
-                          setPregnancyForm((prev) => {
-                            // Auto-calculate blocked months when trimester changes
-                            if (prev.dueDate) {
-                              const cattleMeta = editingId ? cattle.find(c => c.id === editingId) : null;
-                              const cattleType = cattleMeta?.type || 'cow';
-                              const autoBlockedMonths = calculateBlockedMonthsForTrimester(prev.dueDate, trimester, cattleType);
-                              return { ...prev, trimester, blockedMonths: autoBlockedMonths };
-                            }
-                            return { ...prev, trimester };
-                          });
-                        }}
+                            setPregnancyForm((prev) => {
+                              // Auto-calculate blocked months when trimester changes
+                              if (prev.dueDate) {
+                                const cattleMeta = editingId ? cattle.find(c => c.id === editingId) : null;
+                                const cattleType = cattleMeta?.type || 'cow';
+                                const autoBlockedMonths = calculateBlockedMonthsForTrimester(prev.dueDate, trimester, cattleType);
+                                return { ...prev, trimester, blockedMonths: autoBlockedMonths };
+                              }
+                              return { ...prev, trimester };
+                            });
+                          }}
                         >
                           <Text style={[styles.toggleText, pregnancyForm.trimester === trimester && styles.toggleTextActive]}>
                             {trimester} trimester
@@ -2016,11 +2017,11 @@ const styles = StyleSheet.create({
   },
   modalSafe: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
   },
   modalContent: {
     padding: 20,
-    paddingBottom: 40,
+    backgroundColor: AppColors.surface,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -2031,39 +2032,36 @@ const styles = StyleSheet.create({
   closeButton: {
     width: 40,
     height: 40,
-    borderRadius: 12,
-    backgroundColor: '#F1F5F9',
+    borderRadius: 20,
+    backgroundColor: '#E8EFE9',
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
-    color: '#0F172A',
+    color: AppColors.text,
   },
   toggleRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
+    gap: 12,
     marginBottom: 24,
   },
   toggleChip: {
     flex: 1,
-    minWidth: 100,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 8,
     borderWidth: 2,
-    borderColor: '#E2E8F0',
+    borderColor: AppColors.border,
     borderRadius: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    backgroundColor: '#fff',
+    paddingVertical: 14,
+    backgroundColor: AppColors.surface,
   },
   toggleChipActive: {
-    backgroundColor: '#E0F2FE',
-    borderColor: '#0a7ea4',
+    backgroundColor: '#E8EFE9',
+    borderColor: AppColors.primary,
   },
   toggleChipResponsive: {
     maxWidth: '48%',
@@ -2076,13 +2074,11 @@ const styles = StyleSheet.create({
   },
   toggleText: {
     fontWeight: '700',
-    fontSize: 14,
-    color: '#64748B',
-    textAlign: 'center',
-    flexShrink: 1,
+    fontSize: 15,
+    color: AppColors.subtleText,
   },
   toggleTextActive: {
-    color: '#0a7ea4',
+    color: AppColors.primary,
   },
   toggleChipSmall: {
     flex: 1,
@@ -2091,45 +2087,49 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 4,
     borderWidth: 2,
-    borderColor: '#E2E8F0',
+    borderColor: AppColors.border,
     borderRadius: 12,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
   },
   toggleTextSmall: {
     fontWeight: '600',
     fontSize: 13,
-    color: '#64748B',
+    color: AppColors.subtleText,
   },
   formSection: {
     marginBottom: 24,
   },
+  formSectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: AppColors.text,
+    marginBottom: 16,
+  },
   helperText: {
-    fontSize: 12,
-    color: '#94A3B8',
+    fontSize: 13,
+    color: AppColors.subtleText,
     marginTop: 6,
-    fontStyle: 'italic',
+    marginLeft: 4,
   },
   dropdownButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: AppColors.border,
     borderRadius: 12,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     paddingVertical: 14,
-    marginBottom: 6,
   },
   dropdownText: {
     fontSize: 15,
-    color: '#0F172A',
-    flex: 1,
+    color: AppColors.text,
   },
   dropdownPlaceholder: {
-    color: '#94A3B8',
+    color: '#9CA3AF',
   },
   modalOverlay: {
     flex: 1,
@@ -2179,14 +2179,6 @@ const styles = StyleSheet.create({
   pickerOptionTextSelected: {
     color: '#0a7ea4',
     fontWeight: '600',
-  },
-  formSectionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#94A3B8',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 16,
   },
   dateLabel: {
     fontSize: 14,
@@ -2265,6 +2257,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     alignItems: 'center',
   },
+  pregnancySecondaryButton: {
+    backgroundColor: AppColors.background,
+    borderWidth: 1,
+    borderColor: AppColors.border,
+  },
+  pregnancySecondaryText: {
+    color: AppColors.text,
+  },
   dateOptionSelected: {
     backgroundColor: '#E0F2FE',
     borderRadius: 8,
@@ -2275,19 +2275,20 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   dateOptionTextSelected: {
-    color: '#0a7ea4',
+    color: AppColors.primary,
     fontWeight: '700',
   },
   dateConfirmButton: {
-    backgroundColor: '#0a7ea4',
+    backgroundColor: AppColors.primary,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
+    marginTop: 16,
   },
   dateConfirmText: {
     color: '#fff',
-    fontWeight: '700',
     fontSize: 16,
+    fontWeight: '600',
   },
   monthRow: {
     flexDirection: 'row',
@@ -2321,68 +2322,49 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontWeight: '600',
   },
-  datePickerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 2,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    marginTop: 8,
-  },
-  datePickerText: {
-    fontSize: 15,
-    color: '#0F172A',
-    fontWeight: '600',
-  },
-  datePickerPlaceholder: {
-    color: '#94A3B8',
-    fontWeight: '400',
-  },
   row: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    gap: 12,
   },
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: AppColors.surface,
     padding: 16,
-    marginTop: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: AppColors.border,
   },
   switchInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
   },
   switchLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#0F172A',
+    color: AppColors.text,
   },
   primaryButton: {
     flexDirection: 'row',
+    backgroundColor: AppColors.primary,
+    paddingVertical: 16,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#0a7ea4',
-    paddingVertical: 16,
-    borderRadius: 16,
-    marginTop: 12,
+    marginTop: 8,
+    marginBottom: 40,
   },
   primaryText: {
     color: '#fff',
-    fontWeight: '700',
     fontSize: 16,
+    fontWeight: '700',
   },
   error: {
     color: '#DC2626',
-    marginBottom: 8,
+    marginBottom: 16,
     textAlign: 'center',
   },
   detailActions: {
@@ -2510,14 +2492,27 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 14,
+    marginRight: 12,
   },
   detailItemContent: {
     flex: 1,
   },
+  labelContainer: {
+    marginBottom: 2,
+  },
+  label: {
+    fontSize: 12,
+    color: AppColors.subtleText,
+  },
+  helper: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    fontStyle: 'italic',
+    marginTop: 2,
+  },
   detailItemLabel: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: AppColors.subtleText,
     marginBottom: 2,
   },
   detailItemValue: {

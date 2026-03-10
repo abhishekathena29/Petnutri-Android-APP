@@ -58,7 +58,7 @@ const initializeFirebase = () => {
     if (!firebaseConfig.storageBucket) missingVars.push('EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET');
     if (!firebaseConfig.messagingSenderId) missingVars.push('EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID');
     if (!firebaseConfig.appId) missingVars.push('EXPO_PUBLIC_FIREBASE_APP_ID');
-    
+
     console.error('Firebase configuration is missing. Missing variables:', missingVars.join(', '));
     console.error('Config check:', {
       apiKey: firebaseConfig.apiKey ? `${firebaseConfig.apiKey.substring(0, 10)}...` : 'MISSING',
@@ -68,7 +68,7 @@ const initializeFirebase = () => {
     console.error('Please set EXPO_PUBLIC_FIREBASE_* environment variables in EAS Build secrets.');
     throw new Error(`Firebase configuration is incomplete. Missing: ${missingVars.join(', ')}`);
   }
-  
+
   // Validate API key format (should start with AIza)
   if (firebaseConfig.apiKey && !firebaseConfig.apiKey.startsWith('AIza')) {
     console.error('Firebase API key format appears invalid. Should start with "AIza"');
@@ -95,23 +95,18 @@ const initializeFirebase = () => {
 
   // Use getFirestore() - Expo + Firebase v9 handles persistence safely for React Native
   db = getFirestore(app);
-    
+
   initialized = true;
   console.log('Firebase initialized successfully');
 };
 
-// Initialize Firebase immediately but catch errors during build
-// During EAS build, env vars are available, so this should work
-try {
-  initializeFirebase();
-} catch (error) {
-  // During build/bundling, if env vars aren't available, just log a warning
-  // The app will fail at runtime if Firebase isn't initialized, which is expected
-  if (typeof process !== 'undefined' && process.env.NODE_ENV === 'production') {
-    console.warn('Firebase initialization deferred - will initialize at runtime');
-  }
-}
+// Initialize Firebase immediately. We crash if env vars are missing so we can safely cast.
+initializeFirebase();
 
-// Export the initialized instances (or undefined if initialization failed)
-export { app, auth, db };
+// Export the initialized instances as non-nullable since initializeFirebase throws if it fails
+const exportedApp = app as NonNullable<typeof app>;
+const exportedAuth = auth as NonNullable<typeof auth>;
+const exportedDb = db as NonNullable<typeof db>;
+
+export { exportedApp as app, exportedAuth as auth, exportedDb as db };
 

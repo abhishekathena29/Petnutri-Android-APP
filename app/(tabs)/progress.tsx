@@ -49,8 +49,8 @@ export default function ProgressScreen() {
     if (contextSelectedCattle) {
       const today = new Date();
       const todayString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-      setForm((prev) => ({ 
-        ...prev, 
+      setForm((prev) => ({
+        ...prev,
         cattleId: contextSelectedCattle.id,
         logDate: prev.logDate || todayString, // Set today's date if not already set
       }));
@@ -355,7 +355,7 @@ export default function ProgressScreen() {
     return { byCattle, byType };
   }, [dailyLogs, herd]);
 
-  const handleChange = (field: keyof typeof initialForm, value: string | number) => {
+  const handleChange = (field: keyof typeof initialForm, value: string | number | boolean) => {
     setForm((prev) => ({ ...prev, [field]: value }));
     if (error) setError('');
   };
@@ -466,8 +466,8 @@ export default function ProgressScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <ScrollView 
-        contentContainerStyle={styles.container} 
+      <ScrollView
+        contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
         {!contextSelectedCattle ? (
@@ -478,196 +478,197 @@ export default function ProgressScreen() {
           </View>
         ) : (
           <>
-        <SectionCard title="Daily Progress Log">
-          <Text style={styles.helper}>Save daily logs for nutrition, meal compliance, and activity tracking.</Text>
+            <SectionCard title="Daily Progress Log">
+              <Text style={styles.helper}>Save daily logs for nutrition, meal compliance, and activity tracking.</Text>
 
-          <View style={styles.labelContainer}>
-            <Text style={styles.label}>Selected Cattle</Text>
-            <View style={styles.selectedCattleCard}>
-              <View style={styles.selectedCattleInfo}>
-                <Ionicons name={contextSelectedCattle.type === 'cow' ? 'logo-octocat' : 'git-branch-outline'} size={24} color={contextSelectedCattle.type === 'cow' ? '#0a7ea4' : '#D97706'} />
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={styles.selectedCattleName}>{contextSelectedCattle.name}</Text>
-                  <Text style={styles.selectedCattleMeta}>
-                    {contextSelectedCattle.type === 'cow' ? 'Cow' : 'Horse'} • {contextSelectedCattle.weightValue || '—'} {contextSelectedCattle.weightUnit || 'kg'}
-                  </Text>
+              <View style={styles.labelContainer}>
+                <Text style={styles.label}>Selected Cattle</Text>
+                <View style={styles.selectedCattleCard}>
+                  <View style={styles.selectedCattleInfo}>
+                    <Ionicons name={contextSelectedCattle.type === 'cow' ? 'logo-octocat' : 'git-branch-outline'} size={24} color={contextSelectedCattle.type === 'cow' ? '#0a7ea4' : '#D97706'} />
+                    <View style={{ flex: 1, marginLeft: 12 }}>
+                      <Text style={styles.selectedCattleName}>{contextSelectedCattle.name}</Text>
+                      <Text style={styles.selectedCattleMeta}>
+                        {contextSelectedCattle.type === 'cow' ? 'Cow' : 'Horse'} • {contextSelectedCattle.weightValue || '—'} {contextSelectedCattle.weightUnit || 'kg'}
+                      </Text>
+                    </View>
+                  </View>
                 </View>
               </View>
-            </View>
-          </View>
 
-          <View style={styles.labelContainer}>
-            <Text style={styles.label}>Date</Text>
-            <Pressable style={styles.datePickerButton} onPress={openDatePicker}>
-              <Text style={[styles.datePickerText, !form.logDate && styles.datePickerPlaceholder]}>
-                {form.logDate ? formatDisplayDate(form.logDate) : 'Select date'}
-              </Text>
-              <Ionicons name="calendar-outline" size={20} color="#64748B" />
-            </Pressable>
-          </View>
-
-          {/* Meal Take */}
-          <View style={styles.labelContainer}>
-            <Text style={styles.label}>Meal Take</Text>
-            <View style={styles.switchContainer}>
-              <Text style={styles.switchLabel}>Meal taken today</Text>
-              <Switch
-                value={form.mealTake}
-                onValueChange={(value) => handleChange('mealTake', value)}
-                trackColor={{ false: '#CBD5E1', true: '#0a7ea4' }}
-                thumbColor={form.mealTake ? '#fff' : '#f4f3f4'}
-              />
-            </View>
-          </View>
-
-          {/* Water Intake */}
-          <View style={styles.labelContainer}>
-            <Text style={styles.label}>Water Intake (Liters)</Text>
-            <View style={styles.rangeContainer}>
-              <FormField
-                placeholder="20"
-                keyboardType="numeric"
-                value={form.water}
-                onChangeText={(text) => handleChange('water', text)}
-                style={{ flex: 1 }}
-              />
-              <Text style={styles.rangeLabel}>L</Text>
-            </View>
-            <Text style={styles.helperText}>Daily water consumption in liters</Text>
-          </View>
-
-          {/* Activity Level */}
-          <View style={styles.labelContainer}>
-            <Text style={styles.label}>Activity Level</Text>
-            <View style={styles.toggleRow}>
-              {activityOptions.map((option) => (
-                <Pressable
-                  key={option}
-                  style={[styles.optionChip, form.activity === option && styles.optionChipActive]}
-                  onPress={() => handleChange('activity', option)}
-                >
-                  <Text style={[styles.optionText, form.activity === option && styles.optionTextActive]}>
-                    {option}
+              <View style={styles.labelContainer}>
+                <Text style={styles.label}>Date</Text>
+                <Pressable style={styles.datePickerButton} onPress={openDatePicker}>
+                  <Text style={[styles.datePickerText, !form.logDate && styles.datePickerPlaceholder]}>
+                    {form.logDate ? formatDisplayDate(form.logDate) : 'Select date'}
                   </Text>
+                  <Ionicons name="calendar-outline" size={20} color="#64748B" />
                 </Pressable>
-              ))}
-            </View>
-          </View>
+              </View>
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-
-          <Pressable style={[styles.primaryButton, saving && { opacity: 0.6 }]} onPress={handleSave} disabled={saving}>
-            <Text style={styles.primaryText}>{saving ? 'Saving…' : 'Save Daily Log'}</Text>
-          </Pressable>
-        </SectionCard>
-
-        <SectionCard title="Water Consumption Statistics">
-          {waterStats.byCattle.length === 0 ? (
-            <View style={styles.emptyStatsState}>
-              <Ionicons name="water-outline" size={48} color="#CBD5E1" />
-              <Text style={styles.emptyStatsText}>No water data yet</Text>
-              <Text style={styles.emptyStatsSubtext}>Add daily logs with water intake to see statistics</Text>
-            </View>
-          ) : (
-            <>
-              <View style={styles.waterSummaryContainer}>
-                <View style={styles.waterSummaryCard}>
-                  <Ionicons name="water-outline" size={24} color="#3B82F6" />
-                  <View style={styles.waterSummaryContent}>
-                    <Text style={styles.waterSummaryLabel}>Total Water</Text>
-                    <Text style={styles.waterSummaryValue}>{waterStats.total.toFixed(1)} L</Text>
-                  </View>
-                </View>
-                <View style={styles.waterSummaryCard}>
-                  <Ionicons name="stats-chart-outline" size={24} color="#3B82F6" />
-                  <View style={styles.waterSummaryContent}>
-                    <Text style={styles.waterSummaryLabel}>Average Daily</Text>
-                    <Text style={styles.waterSummaryValue}>{waterStats.average} L</Text>
-                  </View>
+              {/* Meal Take */}
+              <View style={styles.labelContainer}>
+                <Text style={styles.label}>Meal Take</Text>
+                <View style={styles.switchContainer}>
+                  <Text style={styles.switchLabel}>Meal taken today</Text>
+                  <Switch
+                    value={Boolean(form.mealTake)}
+                    onValueChange={(value) => handleChange('mealTake', value)}
+                    trackColor={{ false: '#CBD5E1', true: '#0a7ea4' }}
+                    thumbColor={form.mealTake ? '#fff' : '#f4f3f4'}
+                  />
                 </View>
               </View>
 
-              <Text style={styles.waterSectionTitle}>By Cattle</Text>
-              {waterStats.byCattle.map((cattleWater, idx) => (
-                <View key={idx} style={styles.waterCattleCard}>
-                  <View style={styles.waterCattleHeader}>
-                    <Text style={styles.waterCattleName}>{cattleWater.cattleName}</Text>
-                    <View style={styles.waterCattleBadge}>
-                      <Text style={styles.waterCattleBadgeText}>{cattleWater.count} entries</Text>
-                    </View>
-                  </View>
-                  <View style={styles.waterCattleStats}>
-                    <View style={styles.waterStatItem}>
-                      <Text style={styles.waterStatLabel}>Total</Text>
-                      <Text style={styles.waterStatValue}>{cattleWater.total.toFixed(1)} L</Text>
-                    </View>
-                    <View style={styles.waterStatItem}>
-                      <Text style={styles.waterStatLabel}>Average</Text>
-                      <Text style={styles.waterStatValue}>{cattleWater.average} L/day</Text>
-                    </View>
-                  </View>
+              {/* Water Intake */}
+              <View style={styles.labelContainer}>
+                <Text style={styles.label}>Water Intake (Liters)</Text>
+                <View style={styles.rangeContainer}>
+                  <FormField
+                    label=""
+                    placeholder="20"
+                    keyboardType="numeric"
+                    value={form.water}
+                    onChangeText={(text) => handleChange('water', text)}
+                    style={{ flex: 1 }}
+                  />
+                  <Text style={styles.rangeLabel}>L</Text>
                 </View>
-              ))}
-            </>
-          )}
-        </SectionCard>
-
-        <SectionCard title="Daily Logs">
-          {loading ? (
-            <ActivityIndicator />
-          ) : dailyLogs.length === 0 ? (
-            <View style={styles.emptyLogsState}>
-              <Ionicons name="document-outline" size={48} color="#CBD5E1" />
-              <Text style={styles.emptyLogsText}>No daily logs yet</Text>
-              <Text style={styles.emptyLogsSubtext}>Create your first log above</Text>
-            </View>
-          ) : (
-            dailyLogs.map((log) => (
-              <View key={log.id} style={styles.logCard}>
-                <View style={styles.logHeader}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.logTitle}>{log.cattleName}</Text>
-                    <Text style={styles.logSubtitle}>{log.periodLabel || formatDisplayDate(log.logDate || '')}</Text>
-                  </View>
-                  <Pressable
-                    style={styles.deleteButton}
-                    onPress={() => log.id && handleDelete(log.id, log.cattleName)}
-                    disabled={deleting === log.id}
-                  >
-                    {deleting === log.id ? (
-                      <ActivityIndicator size="small" color="#EF4444" />
-                    ) : (
-                      <Ionicons name="trash-outline" size={20} color="#EF4444" />
-                    )}
-                  </Pressable>
-                </View>
-                {/* Parameters */}
-                <View style={styles.parametersRow}>
-                  {log.mealTake !== undefined && (
-                    <View style={styles.parameterBadge}>
-                      <Ionicons name={log.mealTake ? "checkmark-circle" : "close-circle"} size={16} color={log.mealTake ? "#10B981" : "#EF4444"} />
-                      <Text style={styles.parameterText}>Meal: {log.mealTake ? 'Taken' : 'Not Taken'}</Text>
-                    </View>
-                  )}
-                  {log.water !== undefined && (
-                    <View style={styles.parameterBadge}>
-                      <Ionicons name="water-outline" size={16} color="#3B82F6" />
-                      <Text style={styles.parameterText}>Water: {log.water}L</Text>
-                    </View>
-                  )}
-                  {log.activity && (
-                    <View style={styles.parameterBadge}>
-                      <Ionicons name="flash-outline" size={16} color="#F59E0B" />
-                      <Text style={styles.parameterText}>Activity: {log.activity}</Text>
-                    </View>
-                  )}
-                </View>
-                
+                <Text style={styles.helperText}>Daily water consumption in liters</Text>
               </View>
-            ))
-          )}
-        </SectionCard>
-        </>
+
+              {/* Activity Level */}
+              <View style={styles.labelContainer}>
+                <Text style={styles.label}>Activity Level</Text>
+                <View style={styles.toggleRow}>
+                  {activityOptions.map((option) => (
+                    <Pressable
+                      key={option}
+                      style={[styles.optionChip, form.activity === option && styles.optionChipActive]}
+                      onPress={() => handleChange('activity', option)}
+                    >
+                      <Text style={[styles.chipText, form.activity === option && styles.chipTextActive]}>
+                        {option}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+
+              {error ? <Text style={styles.error}>{error}</Text> : null}
+
+              <Pressable style={[styles.primaryButton, saving && { opacity: 0.6 }]} onPress={handleSave} disabled={saving}>
+                <Text style={styles.primaryText}>{saving ? 'Saving…' : 'Save Daily Log'}</Text>
+              </Pressable>
+            </SectionCard>
+
+            <SectionCard title="Water Consumption Statistics">
+              {waterStats.byCattle.length === 0 ? (
+                <View style={styles.emptyStatsState}>
+                  <Ionicons name="water-outline" size={48} color="#CBD5E1" />
+                  <Text style={styles.emptyStatsText}>No water data yet</Text>
+                  <Text style={styles.emptyStatsSubtext}>Add daily logs with water intake to see statistics</Text>
+                </View>
+              ) : (
+                <>
+                  <View style={styles.waterSummaryContainer}>
+                    <View style={styles.waterSummaryCard}>
+                      <Ionicons name="water-outline" size={24} color="#3B82F6" />
+                      <View style={styles.waterSummaryContent}>
+                        <Text style={styles.waterSummaryLabel}>Total Water</Text>
+                        <Text style={styles.waterSummaryValue}>{waterStats.total.toFixed(1)} L</Text>
+                      </View>
+                    </View>
+                    <View style={styles.waterSummaryCard}>
+                      <Ionicons name="stats-chart-outline" size={24} color="#3B82F6" />
+                      <View style={styles.waterSummaryContent}>
+                        <Text style={styles.waterSummaryLabel}>Average Daily</Text>
+                        <Text style={styles.waterSummaryValue}>{waterStats.average} L</Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  <Text style={styles.waterSectionTitle}>By Cattle</Text>
+                  {waterStats.byCattle.map((cattleWater, idx) => (
+                    <View key={idx} style={styles.waterCattleCard}>
+                      <View style={styles.waterCattleHeader}>
+                        <Text style={styles.waterCattleName}>{cattleWater.cattleName}</Text>
+                        <View style={styles.waterCattleBadge}>
+                          <Text style={styles.waterCattleBadgeText}>{cattleWater.count} entries</Text>
+                        </View>
+                      </View>
+                      <View style={styles.waterCattleStats}>
+                        <View style={styles.waterStatItem}>
+                          <Text style={styles.waterStatLabel}>Total</Text>
+                          <Text style={styles.waterStatValue}>{cattleWater.total.toFixed(1)} L</Text>
+                        </View>
+                        <View style={styles.waterStatItem}>
+                          <Text style={styles.waterStatLabel}>Average</Text>
+                          <Text style={styles.waterStatValue}>{cattleWater.average} L/day</Text>
+                        </View>
+                      </View>
+                    </View>
+                  ))}
+                </>
+              )}
+            </SectionCard>
+
+            <SectionCard title="Daily Logs">
+              {loading ? (
+                <ActivityIndicator />
+              ) : dailyLogs.length === 0 ? (
+                <View style={styles.emptyLogsState}>
+                  <Ionicons name="document-outline" size={48} color="#CBD5E1" />
+                  <Text style={styles.emptyLogsText}>No daily logs yet</Text>
+                  <Text style={styles.emptyLogsSubtext}>Create your first log above</Text>
+                </View>
+              ) : (
+                dailyLogs.map((log) => (
+                  <View key={log.id} style={styles.logCard}>
+                    <View style={styles.logHeader}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.logTitle}>{log.cattleName}</Text>
+                        <Text style={styles.logSubtitle}>{log.periodLabel || formatDisplayDate(log.logDate || '')}</Text>
+                      </View>
+                      <Pressable
+                        style={styles.deleteButton}
+                        onPress={() => log.id && handleDelete(log.id, log.cattleName)}
+                        disabled={deleting === log.id}
+                      >
+                        {deleting === log.id ? (
+                          <ActivityIndicator size="small" color="#EF4444" />
+                        ) : (
+                          <Ionicons name="trash-outline" size={20} color="#EF4444" />
+                        )}
+                      </Pressable>
+                    </View>
+                    {/* Parameters */}
+                    <View style={styles.parametersRow}>
+                      {log.mealTake !== undefined && (
+                        <View style={styles.parameterBadge}>
+                          <Ionicons name={log.mealTake ? "checkmark-circle" : "close-circle"} size={16} color={log.mealTake ? "#10B981" : "#EF4444"} />
+                          <Text style={styles.parameterText}>Meal: {log.mealTake ? 'Taken' : 'Not Taken'}</Text>
+                        </View>
+                      )}
+                      {log.water !== undefined && (
+                        <View style={styles.parameterBadge}>
+                          <Ionicons name="water-outline" size={16} color="#3B82F6" />
+                          <Text style={styles.parameterText}>Water: {log.water}L</Text>
+                        </View>
+                      )}
+                      {log.activity && (
+                        <View style={styles.parameterBadge}>
+                          <Ionicons name="flash-outline" size={16} color="#F59E0B" />
+                          <Text style={styles.parameterText}>Activity: {log.activity}</Text>
+                        </View>
+                      )}
+                    </View>
+
+                  </View>
+                ))
+              )}
+            </SectionCard>
+          </>
         )}
       </ScrollView>
 
@@ -778,8 +779,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   container: {
-    padding: 20,
-    paddingBottom: 60,
+    padding: 16,
+    paddingTop: 8,
   },
   helper: {
     color: '#475569',
@@ -1291,13 +1292,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#EEF2FF',
     borderColor: '#4338CA',
   },
-  optionText: {
+  chipText: {
     color: '#4338CA',
     fontSize: 14,
     fontWeight: '500',
     textTransform: 'capitalize',
   },
-  optionTextActive: {
+  chipTextActive: {
     fontWeight: '700',
     color: '#312E81',
   },

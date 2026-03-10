@@ -21,9 +21,9 @@ const toneMap = {
   },
 };
 
-export const Tag = ({ label, tone = 'primary', style, ...textProps }: Props) => (
-  <View style={[styles.tag, toneMap[tone], style]}>
-    <Text style={[styles.text, { color: toneMap[tone].color }]} {...textProps}>
+export const Tag = ({ label, tone = 'primary', style }: Props) => (
+  <View style={[styles.tag, toneMap[tone], style] as any}>
+    <Text style={[styles.text, { color: toneMap[tone].color }]}>
       {label}
     </Text>
   </View>

@@ -1,21 +1,21 @@
 {
   "expo": {
-    "name": "petnutri",
-    "slug": "petnutri",
+    "name": "HerdSync",
+    "slug": "herdsync",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "petnutri",
+    "icon": "./assets/images/herdsync_logo.png",
+    "scheme": "herdsync",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
     },
     "android": {
-      "package": "com.petnutri.app",
+      "package": "com.herdsync.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/icon.png"
+        "foregroundImage": "./assets/images/herdsync_logo.png"
       },
       "edgeToEdgeEnabled": false,
       "statusBar": {
@@ -27,7 +27,7 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/icon.png"
+      "favicon": "./assets/images/herdsync_logo.png"
     },
     "plugins": [
       "expo-router",

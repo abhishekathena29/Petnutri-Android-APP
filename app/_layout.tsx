@@ -39,13 +39,13 @@ function useProtectedRoute(user: unknown, initializing: boolean, isSigningUp: bo
 
 function RootLayoutNav() {
   const { user, initializing, isSigningUp } = useAuth();
-  
+
   useProtectedRoute(user, initializing, isSigningUp);
 
   if (initializing) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFC' }}>
-        <ActivityIndicator size="large" color="#0a7ea4" />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F4F1EA' }}>
+        <ActivityIndicator size="large" color="#7A9E7E" />
       </View>
     );
   }
@@ -80,11 +80,11 @@ function ErrorBoundary({ children }: { children: React.ReactNode }) {
 
   if (hasError) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFC', padding: 20 }}>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F4F1EA', padding: 20 }}>
         <Text style={{ fontSize: 18, fontWeight: '700', color: '#DC2626', marginBottom: 12, textAlign: 'center' }}>
           App Error
         </Text>
-        <Text style={{ fontSize: 14, color: '#64748B', textAlign: 'center', marginBottom: 20 }}>
+        <Text style={{ fontSize: 14, color: '#6B7280', textAlign: 'center', marginBottom: 20 }}>
           {error?.message || 'An unexpected error occurred'}
         </Text>
         <Pressable
@@ -92,7 +92,7 @@ function ErrorBoundary({ children }: { children: React.ReactNode }) {
             setHasError(false);
             setError(null);
           }}
-          style={{ backgroundColor: '#0a7ea4', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 }}
+          style={{ backgroundColor: '#7A9E7E', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8 }}
         >
           <Text style={{ color: '#fff', fontWeight: '600' }}>Retry</Text>
         </Pressable>
@@ -112,7 +112,7 @@ export default function RootLayout() {
         <SelectedCattleProvider>
           <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
             <RootLayoutNav />
-            <StatusBar style="default" translucent backgroundColor="transparent" />
+            <StatusBar style="dark" translucent backgroundColor="transparent" />
           </ThemeProvider>
         </SelectedCattleProvider>
       </AuthProvider>

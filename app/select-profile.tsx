@@ -19,6 +19,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FormField } from '@/components/ui/form-field';
+import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSelectedCattle } from '@/contexts/SelectedCattleContext';
 import { addUserDocument } from '@/services/firestore';
@@ -123,7 +124,7 @@ export default function SelectProfileScreen() {
   const handleChange = (field: keyof typeof defaultForm, value: string | boolean | 'male' | 'female' | 'hands' | 'cm' | 'kg' | 'lbs' | 'pregnant' | 'notPregnant' | 'lactating' | 'maintenance' | 'lightWork' | 'moderateWork' | 'heavyWork') => {
     setForm((prev) => ({ ...prev, [field]: value }));
     if (error) setError('');
-    
+
     // If user selects "pregnant", show pregnancy form modal
     if (field === 'femaleStatus' && value === 'pregnant') {
       setShowPregnancyModal(true);
@@ -181,23 +182,23 @@ export default function SelectProfileScreen() {
 
   const calculateBlockedMonths = (pregnancyDateStr: string, trimester: 'early' | 'mid' | 'late', cattleType: 'cow' | 'horse' = 'cow') => {
     if (!pregnancyDateStr) return [];
-    
+
     try {
       // Parse date properly to avoid timezone issues
       const dateStr = pregnancyDateStr.split('T')[0];
       const [year, month, day] = dateStr.split('-').map(Number);
       const pregnancyDate = new Date(year, month - 1, day);
-      
+
       const blockedMonths: string[] = [];
       const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      
+
       // Determine month range based on trimester and cattle type
       // The pregnancy month itself counts as month 1
       // For cows (9 months): Early: months 1-3 (0-2 offset), Mid: months 4-6 (3-5 offset), Late: months 7-9 (6-8 offset)
       // For horses (12 months): Early: months 1-4 (0-3 offset), Mid: months 5-8 (4-7 offset), Late: months 9-12 (8-11 offset)
       let startMonthOffset = 0;
       let endMonthOffset = cattleType === 'cow' ? 3 : 4; // End is exclusive
-      
+
       if (trimester === 'mid') {
         startMonthOffset = cattleType === 'cow' ? 3 : 4;
         endMonthOffset = cattleType === 'cow' ? 6 : 8;
@@ -205,7 +206,7 @@ export default function SelectProfileScreen() {
         startMonthOffset = cattleType === 'cow' ? 6 : 8;
         endMonthOffset = cattleType === 'cow' ? 9 : 12;
       }
-      
+
       // Calculate blocked months starting from pregnancy date (month 1)
       for (let i = startMonthOffset; i < endMonthOffset; i++) {
         const monthDate = new Date(pregnancyDate);
@@ -215,7 +216,7 @@ export default function SelectProfileScreen() {
           blockedMonths.push(monthName);
         }
       }
-      
+
       return blockedMonths;
     } catch {
       return [];
@@ -236,38 +237,38 @@ export default function SelectProfileScreen() {
 
   const calculateExpectedMonths = (pregnancyDateStr: string, cattleType: 'cow' | 'horse' = 'cow') => {
     if (!pregnancyDateStr) return null;
-    
+
     const pregnancyMonths = cattleType === 'cow' ? 9 : 12;
-    
+
     try {
       // Parse date properly to avoid timezone issues
       const dateStr = pregnancyDateStr.split('T')[0];
       const [year, month, day] = dateStr.split('-').map(Number);
       const pregnancyDate = new Date(year, month - 1, day);
-      
+
       // Calculate expected delivery date (pregnancy date + pregnancy months)
       const expectedDeliveryDate = new Date(pregnancyDate);
       expectedDeliveryDate.setMonth(expectedDeliveryDate.getMonth() + pregnancyMonths);
-      
+
       // Calculate 15 days before and after the expected delivery date
       const dayBefore = new Date(expectedDeliveryDate);
       dayBefore.setDate(dayBefore.getDate() - 15);
-      
+
       const dayAfter = new Date(expectedDeliveryDate);
       dayAfter.setDate(dayAfter.getDate() + 15);
-      
+
       const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      
+
       // Get the months for the range (15 days before to 15 days after)
       const beforeMonth = dayBefore.getMonth();
       const beforeYear = dayBefore.getFullYear();
       const afterMonth = dayAfter.getMonth();
       const afterYear = dayAfter.getFullYear();
-      
+
       // Always show the actual months that the range spans (15 days before to 15 days after)
       const firstMonth = monthNames[beforeMonth];
       const secondMonth = monthNames[afterMonth];
-      
+
       return {
         months: [firstMonth, secondMonth],
         years: [beforeYear, afterYear],
@@ -283,15 +284,15 @@ export default function SelectProfileScreen() {
     const cattleType = form.type || 'cow';
     const blockedMonths = calculateBlockedMonths(formattedDate, pregnancyForm.trimester, cattleType);
     const dueDate = calculateExpectedDeliveryDate(formattedDate, cattleType);
-    
-    setPregnancyForm((prev) => ({ 
-      ...prev, 
+
+    setPregnancyForm((prev) => ({
+      ...prev,
       pregnancyDate: formattedDate,
       dueDate: dueDate,
-      blockedMonths: blockedMonths 
+      blockedMonths: blockedMonths
     }));
     setShowPregnancyDatePicker(false);
-    
+
     // Update selected date picker values if pregnancy date exists
     if (formattedDate) {
       const date = new Date(formattedDate);
@@ -344,16 +345,16 @@ export default function SelectProfileScreen() {
         activityLevel: form.activityLevel,
         climateRegion: form.climateRegion,
       };
-      
+
       // Only include femaleStatus if sex is female
       if (form.sex === 'female') {
         profileData.femaleStatus = form.femaleStatus;
       }
-      
+
       // Create the cattle profile
       const cattleRef = await addUserDocument(user.uid, 'cattle', profileData);
       const cattleId = cattleRef.id;
-      
+
       // If female and pregnant, and pregnancy form is filled, create pregnancy plan
       if (form.sex === 'female' && form.femaleStatus === 'pregnant' && pregnancyForm.pregnancyDate && pregnancyForm.blockedMonths.length > 0) {
         try {
@@ -372,12 +373,12 @@ export default function SelectProfileScreen() {
           // Don't fail the whole operation if pregnancy save fails
         }
       }
-      
+
       resetForm();
       setShowCreateModal(false);
       setShowPregnancyModal(false);
       setPregnancyForm({ pregnancyDate: '', dueDate: '', trimester: 'early', blockedMonths: [] });
-      
+
       // The cattle list will refresh automatically via useUserCollection
       // We'll need to wait for it to update, then select the new cattle
       // For now, just show success and let user select manually
@@ -402,39 +403,38 @@ export default function SelectProfileScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      {/* Header with Back Button */}
-      <View style={styles.topHeader}>
-        <Pressable style={styles.backButton} onPress={handleBackToLogin}>
-          <Ionicons name="arrow-back" size={24} color="#0F172A" />
+      {/* Header with Logout */}
+      <View style={[styles.topHeader, { paddingTop: insets.top }]}>
+        <Text style={styles.topHeaderTitle}>HerdSync</Text>
+        <Pressable onPress={handleBackToLogin} style={({ pressed }) => [styles.logoutButton, pressed && { opacity: 0.7 }]}>
+          <Text style={styles.logoutText}>Logout</Text>
         </Pressable>
-        <Text style={styles.topHeaderTitle}>Select Profile</Text>
-        <View style={{ width: 40 }} />
       </View>
-      <ScrollView 
-        contentContainerStyle={styles.content} 
+      <ScrollView
+        contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Select Cattle Profile</Text>
+          <Text style={styles.title}>Select Profile</Text>
           <Text style={styles.subtitle}>Choose a profile to continue or create a new one</Text>
         </View>
 
         {/* Create New Profile Card */}
         <Pressable style={styles.addCard} onPress={() => setShowCreateModal(true)}>
           <View style={styles.addCardIcon}>
-            <Ionicons name="add" size={32} color="#fff" />
+            <Ionicons name="add" size={32} color={AppColors.primary} />
           </View>
           <View style={styles.addCardContent}>
             <Text style={styles.addCardTitle}>Create New Profile</Text>
             <Text style={styles.addCardSubtitle}>Add a new cattle profile</Text>
           </View>
-          <Ionicons name="chevron-forward" size={24} color="#94A3B8" />
+          <Ionicons name="chevron-forward" size={24} color={AppColors.subtleText} />
         </Pressable>
 
         {/* Loading State */}
         {loading && (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#0a7ea4" />
+            <ActivityIndicator size="large" color={AppColors.primary} />
             <Text style={styles.loadingText}>Loading profiles...</Text>
           </View>
         )}
@@ -442,7 +442,9 @@ export default function SelectProfileScreen() {
         {/* Empty State */}
         {!loading && cattle.length === 0 && (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>🐮</Text>
+            <View style={styles.emptyIconContainer}>
+              <Text style={styles.emptyIcon}>🐮</Text>
+            </View>
             <Text style={styles.emptyTitle}>No profiles yet</Text>
             <Text style={styles.emptySubtitle}>Create your first cattle profile to get started</Text>
           </View>
@@ -458,27 +460,33 @@ export default function SelectProfileScreen() {
                 onPress={() => handleSelectCattle(item)}
               >
                 <View style={styles.profileCardContent}>
-                  <View style={styles.profileAvatar}>
+                  <View style={[styles.profileAvatar, { backgroundColor: item.type === 'cow' ? '#E8EFE9' : '#F5F1E6' }]}>
                     <Text style={styles.avatarEmoji}>{getCattleIcon(item.type)}</Text>
                   </View>
                   <View style={styles.profileInfo}>
                     <View style={styles.profileHeader}>
                       <Text style={styles.profileName}>{item.name}</Text>
-                      <Text style={styles.metaText}>{item.sex === 'male' ? '♂' : '♀'}</Text>
+                      <Text style={[styles.metaText, { color: AppColors.subtleText, fontSize: 13 }]}>{item.sex === 'male' ? '♂' : '♀'}</Text>
                     </View>
                     <Text style={styles.profileBreed}>{item.breed || 'Unknown breed'}</Text>
                     <View style={styles.profileMeta}>
                       <View style={styles.metaItem}>
-                        <Ionicons name="scale-outline" size={14} color="#64748B" />
+                        <Ionicons name="scale-outline" size={14} color={AppColors.subtleText} />
                         <Text style={styles.metaText}>{item.weightValue || '—'} {item.weightUnit || 'kg'}</Text>
                       </View>
                       <View style={styles.metaItem}>
-                        <Ionicons name="calendar-outline" size={14} color="#64748B" />
+                        <Ionicons name="calendar-outline" size={14} color={AppColors.subtleText} />
                         <Text style={styles.metaText}>{item.ageYears || '—'} yrs</Text>
                       </View>
                       {item.sex === 'female' && item.femaleStatus && (
-                        <View style={styles.femaleStatusBadge}>
-                          <Text style={styles.femaleStatusText}>
+                        <View style={[
+                          styles.femaleStatusBadge,
+                          item.femaleStatus === 'pregnant' ? styles.pregnantBadge : styles.lactatingBadge
+                        ]}>
+                          <Text style={[
+                            styles.femaleStatusText,
+                            item.femaleStatus === 'pregnant' ? styles.pregnantText : styles.lactatingText
+                          ]}>
                             {item.femaleStatus === 'pregnant' ? '🤰' : item.femaleStatus === 'lactating' ? '🥛' : ''}
                           </Text>
                         </View>
@@ -486,7 +494,7 @@ export default function SelectProfileScreen() {
                     </View>
                   </View>
                 </View>
-                <Ionicons name="chevron-forward" size={24} color="#94A3B8" />
+                <Ionicons name="chevron-forward" size={24} color={AppColors.subtleText} />
               </Pressable>
             ))}
           </View>
@@ -500,8 +508,8 @@ export default function SelectProfileScreen() {
             {Platform.OS === 'web' ? (
               <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                 <View style={styles.modalHeader}>
-                  <Pressable style={styles.closeButton} onPress={() => { 
-                    setShowCreateModal(false); 
+                  <Pressable style={styles.closeButton} onPress={() => {
+                    setShowCreateModal(false);
                     resetForm();
                   }}>
                     <Ionicons name="close" size={24} color="#64748B" />
@@ -619,13 +627,13 @@ export default function SelectProfileScreen() {
                         <Pressable
                           key={status}
                           style={[
-                            styles.toggleChip, 
+                            styles.toggleChip,
                             styles.toggleChipResponsive,
                             form.femaleStatus === status && styles.toggleChipActive
                           ]}
                           onPress={() => handleChange('femaleStatus', status)}
                         >
-                          <Text 
+                          <Text
                             style={[styles.toggleText, form.femaleStatus === status && styles.toggleTextActive]}
                             numberOfLines={1}
                             adjustsFontSizeToFit
@@ -646,13 +654,13 @@ export default function SelectProfileScreen() {
                       <Pressable
                         key={level}
                         style={[
-                          styles.toggleChip, 
+                          styles.toggleChip,
                           styles.toggleChipResponsive,
                           form.activityLevel === level && styles.toggleChipActive
                         ]}
                         onPress={() => handleChange('activityLevel', level)}
                       >
-                        <Text 
+                        <Text
                           style={[styles.toggleText, form.activityLevel === level && styles.toggleTextActive]}
                           numberOfLines={1}
                           adjustsFontSizeToFit
@@ -713,8 +721,8 @@ export default function SelectProfileScreen() {
               <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
                 <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                   <View style={styles.modalHeader}>
-                    <Pressable style={styles.closeButton} onPress={() => { 
-                      setShowCreateModal(false); 
+                    <Pressable style={styles.closeButton} onPress={() => {
+                      setShowCreateModal(false);
                       resetForm();
                     }}>
                       <Ionicons name="close" size={24} color="#64748B" />
@@ -956,7 +964,7 @@ export default function SelectProfileScreen() {
                   <Text style={styles.modalTitle}>Pregnancy Plan</Text>
                   <View style={{ width: 40 }} />
                 </View>
-                
+
                 {!pregnancyForm.pregnancyDate && (
                   <Text style={[styles.helperText, { marginBottom: 16, paddingHorizontal: 4 }]}>
                     Please select the pregnancy date first. Months will be automatically blocked based on the trimester.
@@ -1025,7 +1033,7 @@ export default function SelectProfileScreen() {
                       </View>
                     )}
                   </View>
-                  
+
                   {pregnancyForm.pregnancyDate ? (
                     <>
                       <View style={styles.monthsGrid}>
@@ -1086,7 +1094,7 @@ export default function SelectProfileScreen() {
                     <Text style={styles.modalTitle}>Pregnancy Plan</Text>
                     <View style={{ width: 40 }} />
                   </View>
-                  
+
                   {!pregnancyForm.pregnancyDate && (
                     <Text style={[styles.helperText, { marginBottom: 16, paddingHorizontal: 4 }]}>
                       Please select the pregnancy date first. Months will be automatically blocked based on the trimester.
@@ -1155,7 +1163,7 @@ export default function SelectProfileScreen() {
                         </View>
                       )}
                     </View>
-                    
+
                     {pregnancyForm.pregnancyDate ? (
                       <>
                         <View style={styles.monthsGrid}>
@@ -1222,7 +1230,7 @@ export default function SelectProfileScreen() {
                 <Ionicons name="close" size={24} color="#64748B" />
               </Pressable>
             </View>
-            
+
             <View style={styles.datePickerRow}>
               <View style={styles.dateColumn}>
                 <Text style={styles.dateColumnLabel}>Month</Text>
@@ -1289,7 +1297,7 @@ export default function SelectProfileScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
   },
   topHeader: {
     flexDirection: 'row',
@@ -1309,10 +1317,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  logoutButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: AppColors.border,
+  },
+  logoutText: {
+    color: '#EF4444',
+    fontWeight: '600',
+    fontSize: 14,
+  },
   topHeaderTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#0F172A',
+    color: AppColors.text,
   },
   content: {
     padding: 20,
@@ -1324,22 +1345,22 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '800',
-    color: '#0F172A',
+    color: AppColors.text,
     marginBottom: 6,
   },
   subtitle: {
     fontSize: 15,
-    color: '#64748B',
+    color: AppColors.subtleText,
   },
   addCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 20,
     padding: 20,
     marginBottom: 24,
     borderWidth: 2,
-    borderColor: '#E0F2FE',
+    borderColor: AppColors.primary,
     borderStyle: 'dashed',
     shadowColor: '#0a7ea4',
     shadowOffset: { width: 0, height: 4 },
@@ -1354,7 +1375,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 16,
-    backgroundColor: '#0a7ea4',
+    backgroundColor: '#E8EFE9',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -1365,12 +1386,12 @@ const styles = StyleSheet.create({
   addCardTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#0F172A',
+    color: AppColors.text,
     marginBottom: 4,
   },
   addCardSubtitle: {
     fontSize: 14,
-    color: '#64748B',
+    color: AppColors.subtleText,
   },
   loadingContainer: {
     alignItems: 'center',
@@ -1388,6 +1409,17 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     marginTop: 20,
   },
+  emptyIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: AppColors.border,
+  },
   emptyIcon: {
     fontSize: 64,
     marginBottom: 16,
@@ -1395,12 +1427,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#0F172A',
+    color: AppColors.text,
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 15,
-    color: '#64748B',
+    color: AppColors.subtleText,
     textAlign: 'center',
     paddingHorizontal: 40,
   },
@@ -1410,7 +1442,7 @@ const styles = StyleSheet.create({
   profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 20,
     padding: 16,
     shadowColor: '#000',
@@ -1451,7 +1483,7 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#0F172A',
+    color: AppColors.text,
   },
   healthDot: {
     width: 8,
@@ -1460,7 +1492,7 @@ const styles = StyleSheet.create({
   },
   profileBreed: {
     fontSize: 14,
-    color: '#64748B',
+    color: AppColors.subtleText,
     marginBottom: 6,
   },
   profileMeta: {
@@ -1486,12 +1518,24 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 8,
   },
+  pregnantBadge: {
+    backgroundColor: '#FCE7F3',
+  },
+  lactatingBadge: {
+    backgroundColor: '#E0F2FE',
+  },
   femaleStatusText: {
     fontSize: 12,
   },
+  pregnantText: {
+    color: '#EC4899',
+  },
+  lactatingText: {
+    color: '#0284C7',
+  },
   modalSafe: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
   },
   modalContent: {
     padding: 20,
@@ -1514,7 +1558,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#0F172A',
+    color: AppColors.text,
   },
   toggleRow: {
     flexDirection: 'row',
@@ -1530,15 +1574,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     borderWidth: 2,
-    borderColor: '#E2E8F0',
+    borderColor: AppColors.border,
     borderRadius: 16,
     paddingVertical: 12,
     paddingHorizontal: 10,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
   },
   toggleChipActive: {
     backgroundColor: '#E0F2FE',
-    borderColor: '#0a7ea4',
+    borderColor: AppColors.primary,
   },
   toggleChipResponsive: {
     maxWidth: '48%',
@@ -1552,12 +1596,12 @@ const styles = StyleSheet.create({
   toggleText: {
     fontWeight: '700',
     fontSize: 14,
-    color: '#64748B',
+    color: AppColors.subtleText,
     textAlign: 'center',
     flexShrink: 1,
   },
   toggleTextActive: {
-    color: '#0a7ea4',
+    color: AppColors.primary,
   },
   toggleChipSmall: {
     flex: 1,
@@ -1566,16 +1610,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 4,
     borderWidth: 2,
-    borderColor: '#E2E8F0',
+    borderColor: AppColors.border,
     borderRadius: 12,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
   },
   toggleTextSmall: {
     fontWeight: '600',
     fontSize: 13,
-    color: '#64748B',
+    color: AppColors.subtleText,
   },
   formSection: {
     marginBottom: 24,
@@ -1604,9 +1648,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: AppColors.border,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 14,
@@ -1614,7 +1658,7 @@ const styles = StyleSheet.create({
   },
   datePickerText: {
     fontSize: 15,
-    color: '#0F172A',
+    color: AppColors.text,
     flex: 1,
   },
   datePickerPlaceholder: {
@@ -1628,7 +1672,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   dateModalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 24,
     padding: 20,
     width: '100%',
@@ -1643,7 +1687,7 @@ const styles = StyleSheet.create({
   dateModalTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#0F172A',
+    color: AppColors.text,
   },
   datePickerRow: {
     flexDirection: 'row',
@@ -1663,7 +1707,7 @@ const styles = StyleSheet.create({
   },
   dateScrollView: {
     height: 180,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
     borderRadius: 12,
   },
   dateOption: {
@@ -1678,14 +1722,14 @@ const styles = StyleSheet.create({
   },
   dateOptionText: {
     fontSize: 16,
-    color: '#64748B',
+    color: AppColors.subtleText,
   },
   dateOptionTextSelected: {
-    color: '#0a7ea4',
+    color: AppColors.primary,
     fontWeight: '700',
   },
   dateConfirmButton: {
-    backgroundColor: '#0a7ea4',
+    backgroundColor: AppColors.primary,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',

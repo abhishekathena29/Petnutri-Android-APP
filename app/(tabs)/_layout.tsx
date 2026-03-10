@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { HapticTab } from '@/components/haptic-tab';
-import { Colors } from '@/constants/theme';
+import { AppColors, Colors } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSelectedCattle } from '@/contexts/SelectedCattleContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -62,6 +62,8 @@ export default function TabLayout() {
       <Tabs
         screenOptions={({ route }) => ({
           headerShown: true,
+          headerBackVisible: false,
+          gestureEnabled: false,
           headerTitleAlign: 'left',
           headerStyle: styles.header,
           headerTitleStyle: styles.headerTitle,
@@ -69,11 +71,11 @@ export default function TabLayout() {
             <View style={styles.headerRight}>
               {selectedCattle && (
                 <Pressable style={styles.profileBtn} onPress={handleProfileSelect}>
-                  <Ionicons name="person-circle-outline" size={20} color="#0a7ea4" />
+                  <Ionicons name="person-circle-outline" size={20} color={AppColors.primary} />
                   <Text style={styles.profileText} numberOfLines={1}>
                     {selectedCattle.name}
                   </Text>
-                  <Ionicons name="chevron-down" size={16} color="#0a7ea4" />
+                  <Ionicons name="chevron-down" size={16} color={AppColors.primary} />
                 </Pressable>
               )}
               <Pressable style={styles.logoutBtn} onPress={handleLogout}>
@@ -83,9 +85,9 @@ export default function TabLayout() {
           ),
           tabBarButton: HapticTab,
           tabBarStyle: {
-            backgroundColor: '#fff',
+            backgroundColor: AppColors.surface,
             borderTopWidth: 1,
-            borderTopColor: '#E2E8F0',
+            borderTopColor: AppColors.border,
             paddingVertical: 6,
             height: 70,
             elevation: 8,
@@ -94,48 +96,48 @@ export default function TabLayout() {
             shadowOpacity: 0.1,
             shadowRadius: 4,
           },
-          tabBarInactiveTintColor: '#94A3B8',
-          tabBarActiveTintColor: '#0a7ea4',
+          tabBarInactiveTintColor: AppColors.subtleText,
+          tabBarActiveTintColor: AppColors.primary,
           tabBarLabelStyle: {
             fontSize: 12,
             fontWeight: '600',
           },
-          headerTitle: screenTitles[route.name] ?? 'PetNutri',
+          headerTitle: screenTitles[route.name] ?? 'HerdSync',
         })}>
         <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color, size }) => <Ionicons name="home" color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
-        name="meals"
-        options={{
-          title: 'Meals',
-          tabBarIcon: ({ color, size }) => <Ionicons name="restaurant" color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
-        name="pregnancy"
-        options={{
-          title: 'Pregnant',
-          tabBarIcon: ({ color, size }) => <Ionicons name="calendar" color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
-        name="calculator"
-        options={{
-          title: 'Calculator',
-          tabBarIcon: ({ color, size }) => <Ionicons name="calculator" color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
-        name="progress"
-        options={{
-          title: 'Progress',
-          tabBarIcon: ({ color, size }) => <Ionicons name="bar-chart" color={color} size={size} />,
-        }}
+          name="index"
+          options={{
+            title: 'Home',
+            tabBarIcon: ({ color, size }) => <Ionicons name="home" color={color} size={size} />,
+          }}
+        />
+        <Tabs.Screen
+          name="meals"
+          options={{
+            title: 'Meals',
+            tabBarIcon: ({ color, size }) => <Ionicons name="restaurant" color={color} size={size} />,
+          }}
+        />
+        <Tabs.Screen
+          name="pregnancy"
+          options={{
+            title: 'Pregnant',
+            tabBarIcon: ({ color, size }) => <Ionicons name="calendar" color={color} size={size} />,
+          }}
+        />
+        <Tabs.Screen
+          name="calculator"
+          options={{
+            title: 'Calculator',
+            tabBarIcon: ({ color, size }) => <Ionicons name="calculator" color={color} size={size} />,
+          }}
+        />
+        <Tabs.Screen
+          name="progress"
+          options={{
+            title: 'Progress',
+            tabBarIcon: ({ color, size }) => <Ionicons name="bar-chart" color={color} size={size} />,
+          }}
         />
       </Tabs>
       {/* Profile Modal */}
@@ -147,12 +149,12 @@ export default function TabLayout() {
                 <View style={styles.modalHeader}>
                   <Text style={styles.modalTitle}>Profile Details</Text>
                   <Pressable onPress={() => setShowProfileModal(false)}>
-                    <Ionicons name="close" size={24} color="#64748B" />
+                    <Ionicons name="close" size={24} color={AppColors.subtleText} />
                   </Pressable>
                 </View>
                 <ScrollView showsVerticalScrollIndicator={false}>
                   <View style={styles.profileDetailSection}>
-                    <View style={styles.profileAvatarLarge}>
+                    <View style={[styles.profileAvatarLarge, { backgroundColor: selectedCattle.type === 'cow' ? '#E8EFE9' : '#F5F1E6' }]}>
                       <Text style={styles.profileAvatarEmoji}>{selectedCattle.type === 'cow' ? '🐄' : '🐴'}</Text>
                     </View>
                     <Text style={styles.profileName}>{selectedCattle.name}</Text>
@@ -171,26 +173,26 @@ export default function TabLayout() {
                   </View>
                   <View style={styles.profileStats}>
                     <View style={styles.statItem}>
-                      <Ionicons name="scale-outline" size={20} color="#0a7ea4" />
+                      <Ionicons name="scale-outline" size={20} color={AppColors.primary} />
                       <Text style={styles.statLabel}>Weight</Text>
                       <Text style={styles.statValue}>
                         {selectedCattle.weightValue ? `${selectedCattle.weightValue} ${selectedCattle.weightUnit || 'kg'}` : '—'}
                       </Text>
                     </View>
                     <View style={styles.statItem}>
-                      <Ionicons name="resize-outline" size={20} color="#0a7ea4" />
+                      <Ionicons name="resize-outline" size={20} color={AppColors.primary} />
                       <Text style={styles.statLabel}>Height</Text>
                       <Text style={styles.statValue}>
                         {selectedCattle.heightValue ? `${selectedCattle.heightValue} ${selectedCattle.heightUnit || 'cm'}` : '—'}
                       </Text>
                     </View>
                     <View style={styles.statItem}>
-                      <Ionicons name="calendar-outline" size={20} color="#0a7ea4" />
+                      <Ionicons name="calendar-outline" size={20} color={AppColors.primary} />
                       <Text style={styles.statLabel}>Age</Text>
                       <Text style={styles.statValue}>{selectedCattle.ageYears || '—'} yrs</Text>
                     </View>
                     <View style={styles.statItem}>
-                      <Ionicons name={selectedCattle.sex === 'male' ? 'male' : 'female'} size={20} color="#0a7ea4" />
+                      <Ionicons name={selectedCattle.sex === 'male' ? 'male' : 'female'} size={20} color={AppColors.primary} />
                       <Text style={styles.statLabel}>Gender</Text>
                       <Text style={styles.statValue}>{selectedCattle.sex === 'male' ? '♂ Male' : '♀ Female'}</Text>
                     </View>
@@ -233,12 +235,12 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   header: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
   },
   headerTitle: {
     fontSize: 22,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontWeight: '800',
+    color: AppColors.text,
   },
   headerRight: {
     flexDirection: 'row',
@@ -254,13 +256,13 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#E0F2FE',
-    backgroundColor: '#F0F9FF',
+    borderColor: '#7A9E7E40',
+    backgroundColor: '#7A9E7E10',
     maxWidth: 150,
   },
   profileText: {
-    color: '#0a7ea4',
-    fontWeight: '600',
+    color: AppColors.primary,
+    fontWeight: '700',
     fontSize: 14,
   },
   logoutBtn: {
@@ -268,8 +270,8 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#fff',
+    borderColor: AppColors.border,
+    backgroundColor: AppColors.surface,
   },
   logoutText: {
     color: '#DC2626',
@@ -283,7 +285,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 24,
     padding: 24,
     width: '100%',
@@ -299,7 +301,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#0F172A',
+    color: AppColors.text,
   },
   profileDetailSection: {
     alignItems: 'center',
@@ -309,7 +311,6 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 20,
-    backgroundColor: '#E0F2FE',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
@@ -320,12 +321,12 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#0F172A',
+    color: AppColors.text,
     marginBottom: 4,
   },
   profileBreed: {
     fontSize: 16,
-    color: '#64748B',
+    color: AppColors.subtleText,
     marginBottom: 12,
   },
   profileTags: {
@@ -341,7 +342,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
-    backgroundColor: '#E0F2FE',
+    backgroundColor: '#E8EFE9',
   },
   tagSuccess: {
     backgroundColor: '#ECFDF5',
@@ -349,7 +350,7 @@ const styles = StyleSheet.create({
   tagText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#0a7ea4',
+    color: AppColors.primary,
   },
   tagTextSuccess: {
     color: '#10B981',
@@ -363,36 +364,36 @@ const styles = StyleSheet.create({
   statItem: {
     flex: 1,
     minWidth: '45%',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
     borderRadius: 12,
     padding: 12,
     alignItems: 'center',
   },
   statLabel: {
     fontSize: 12,
-    color: '#64748B',
+    color: AppColors.subtleText,
     marginTop: 4,
   },
   statValue: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#0F172A',
+    color: AppColors.text,
     marginTop: 2,
   },
   profileInfo: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
     borderRadius: 12,
     padding: 12,
     marginBottom: 12,
   },
   infoLabel: {
     fontSize: 12,
-    color: '#64748B',
+    color: AppColors.subtleText,
     marginBottom: 4,
   },
   infoValue: {
     fontSize: 14,
-    color: '#0F172A',
+    color: AppColors.text,
     fontWeight: '600',
   },
   switchProfileButton: {
@@ -400,7 +401,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#0a7ea4',
+    backgroundColor: AppColors.primary,
     paddingVertical: 14,
     borderRadius: 12,
     marginTop: 12,

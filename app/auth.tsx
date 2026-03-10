@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FormField } from '@/components/ui/form-field';
+import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 
 // Helper function to convert hex color to rgba
@@ -52,11 +53,11 @@ export default function AuthScreen() {
 
   const handleSubmit = () => {
     if (submitting) return;
-    
+
     setSubmitting(true);
     setError('');
     setSuccess('');
-    
+
     if (mode === 'login') {
       login(form.email, form.password)
         .then(() => {
@@ -100,12 +101,12 @@ export default function AuthScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <KeyboardAvoidingView 
-        style={{ flex: 1 }} 
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        <ScrollView 
+        <ScrollView
           contentContainerStyle={styles.container}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
@@ -113,6 +114,10 @@ export default function AuthScreen() {
           bounces={false}
         >
           <View style={styles.card}>
+            <View style={{ alignItems: 'center', marginBottom: 16 }}>
+              <Image source={require('@/assets/images/herdsync_logo.png')} style={{ width: 64, height: 64, marginBottom: 8, resizeMode: 'contain' }} />
+              <Text style={styles.brandTitle}>HerdSync</Text>
+            </View>
             <Text style={styles.title}>{title}</Text>
             <Text style={styles.subtitle}>Manage all cattle nutrition insights in one place.</Text>
 
@@ -156,7 +161,7 @@ export default function AuthScreen() {
 
             <Pressable style={styles.secondaryButton} onPress={toggleMode}>
               <Text style={styles.secondaryText}>
-                {mode === 'login' ? 'New to PetNutri? ' : 'Already registered? '}
+                {mode === 'login' ? 'New to HerdSync? ' : 'Already registered? '}
                 <Text style={styles.switchText}>{mode === 'login' ? 'Create an account' : 'Login instead'}</Text>
               </Text>
             </Pressable>
@@ -170,7 +175,7 @@ export default function AuthScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: AppColors.background,
   },
   container: {
     flexGrow: 1,
@@ -178,32 +183,40 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     padding: 24,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.08,
+    borderColor: AppColors.border,
+    shadowColor: AppColors.text,
+    shadowOpacity: 0.05,
     shadowRadius: 30,
     shadowOffset: { width: 0, height: 10 },
     ...(Platform.OS === 'web' && {
-      boxShadow: createBoxShadow('#0F172A', { width: 0, height: 10 }, 0.08, 30),
+      boxShadow: createBoxShadow(AppColors.text, { width: 0, height: 10 }, 0.05, 30),
     }),
+  },
+  brandTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: AppColors.primary,
+    marginBottom: 24,
+    textAlign: 'center',
+    letterSpacing: 1,
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#0F172A',
+    color: AppColors.text,
     marginBottom: 6,
   },
   subtitle: {
     fontSize: 15,
-    color: '#475569',
+    color: AppColors.subtleText,
     marginBottom: 30,
   },
   primaryButton: {
-    backgroundColor: '#0a7ea4',
+    backgroundColor: AppColors.primary,
     paddingVertical: 14,
     borderRadius: 16,
     alignItems: 'center',
@@ -219,11 +232,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   secondaryText: {
-    color: '#334155',
+    color: AppColors.subtleText,
     fontSize: 14,
   },
   switchText: {
-    color: '#0a7ea4',
+    color: AppColors.accent,
     fontWeight: '600',
   },
   error: {
