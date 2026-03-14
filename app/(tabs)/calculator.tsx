@@ -5,6 +5,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { FormField } from '@/components/ui/form-field';
 import { SectionCard } from '@/components/ui/section-card';
+import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSelectedCattle } from '@/contexts/SelectedCattleContext';
 import { useUserCollection } from '@/hooks/use-user-collection';
@@ -517,7 +518,7 @@ const Metric = ({ label, value, description }: { label: string; value: string; d
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
   },
   container: {
     padding: 20,
@@ -547,7 +548,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#A5B4FC',
     marginRight: 10,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
   },
   cattleChipActive: {
     backgroundColor: '#E0E7FF',
@@ -570,7 +571,7 @@ const styles = StyleSheet.create({
     borderColor: '#C7D2FE',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
   },
   optionChipActive: {
     backgroundColor: '#EEF2FF',
@@ -600,7 +601,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   historyCard: {
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
@@ -660,7 +661,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
     borderRadius: 12,
     padding: 14,
   },
@@ -766,7 +767,7 @@ const styles = StyleSheet.create({
   metric: {
     flex: 1,
     borderRadius: 12,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
     padding: 12,
     borderWidth: 1,
     borderColor: '#E0E7FF',
@@ -802,7 +803,7 @@ const styles = StyleSheet.create({
   emptyState: {
     alignItems: 'center',
     paddingVertical: 60,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 20,
     marginTop: 20,
   },
@@ -864,7 +865,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   tableContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E0E7FF',
@@ -958,7 +959,7 @@ const styles = StyleSheet.create({
   },
   recipeSuggestionCard: {
     width: '48%',
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,

@@ -12,8 +12,8 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-
 import { Tag } from '@/components/ui/tag';
+import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSelectedCattle } from '@/contexts/SelectedCattleContext';
 import { useUserCollection } from '@/hooks/use-user-collection';
@@ -1144,11 +1144,11 @@ export default function MealsScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     paddingHorizontal: 20,
     paddingVertical: 8,
     borderBottomWidth: 1,
@@ -1181,7 +1181,7 @@ const styles = StyleSheet.create({
   createCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 20,
     padding: 20,
     marginBottom: 24,
@@ -1245,7 +1245,7 @@ const styles = StyleSheet.create({
   emptyState: {
     alignItems: 'center',
     paddingVertical: 48,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 20,
   },
   emptyTitle: {
@@ -1266,7 +1266,7 @@ const styles = StyleSheet.create({
   },
   planCard: {
     width: '47%',
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 20,
     padding: 16,
     shadowColor: '#000',
@@ -1376,7 +1376,7 @@ const styles = StyleSheet.create({
   },
   recipeCard: {
     width: '48%',
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 18,
     padding: 14,
     borderWidth: 1,
@@ -1450,7 +1450,7 @@ const styles = StyleSheet.create({
   },
   modalSafe: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
   },
   modalContent: {
     padding: 20,
@@ -1525,7 +1525,7 @@ const styles = StyleSheet.create({
   cattleOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 16,
     padding: 16,
     borderWidth: 2,
@@ -1566,7 +1566,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 14,
     padding: 16,
     borderWidth: 2,
@@ -1584,7 +1584,7 @@ const styles = StyleSheet.create({
   dayOption: {
     flex: 1,
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 16,
     padding: 16,
     borderWidth: 2,
@@ -1626,7 +1626,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
   },
   detailHeaderCard: {
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 20,
     padding: 20,
     marginBottom: 20,
@@ -1665,7 +1665,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
     borderRadius: 14,
     padding: 16,
   },
@@ -1690,7 +1690,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E2E8F0',
   },
   daySection: {
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 16,
     padding: 16,
     marginBottom: 14,
@@ -1781,7 +1781,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   recipeModalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     maxHeight: '90%',
@@ -1844,7 +1844,7 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   recipeDetailSection: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,

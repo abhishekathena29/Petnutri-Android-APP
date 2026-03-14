@@ -6,6 +6,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { FormField } from '@/components/ui/form-field';
 import { SectionCard } from '@/components/ui/section-card';
 import { Tag } from '@/components/ui/tag';
+import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSelectedCattle } from '@/contexts/SelectedCattleContext';
 import { useUserCollection } from '@/hooks/use-user-collection';
@@ -776,7 +777,7 @@ const Metric = ({ label, value }: { label: string; value: string }) => (
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
   },
   container: {
     padding: 16,
@@ -806,7 +807,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     marginRight: 10,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
   },
   cattleChipActive: {
     backgroundColor: '#E2E8F0',
@@ -822,7 +823,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderWidth: 1,
     borderColor: '#D0D7DE',
     borderRadius: 12,
@@ -841,7 +842,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderWidth: 1,
     borderColor: '#D0D7DE',
     borderRadius: 12,
@@ -878,7 +879,7 @@ const styles = StyleSheet.create({
   cattleStatContainer: {
     marginBottom: 24,
     padding: 16,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -917,7 +918,7 @@ const styles = StyleSheet.create({
   chartContainer: {
     marginBottom: 16,
     padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -964,7 +965,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
   },
   logHeader: {
     flexDirection: 'row',
@@ -1038,7 +1039,7 @@ const styles = StyleSheet.create({
   ratingContainer: {
     marginTop: 12,
     padding: 12,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -1059,7 +1060,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#CBD5E1',
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     alignItems: 'center',
   },
   ratingButtonActive: {
@@ -1082,7 +1083,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   dateModalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 24,
     padding: 20,
     width: '100%',
@@ -1117,7 +1118,7 @@ const styles = StyleSheet.create({
   },
   dateScrollView: {
     height: 180,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
     borderRadius: 12,
   },
   dateOption: {
@@ -1157,7 +1158,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 24,
     padding: 20,
     width: '100%',
@@ -1188,7 +1189,7 @@ const styles = StyleSheet.create({
   emptyState: {
     alignItems: 'center',
     paddingVertical: 60,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 20,
     marginTop: 20,
   },
@@ -1262,7 +1263,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderWidth: 1,
     borderColor: '#D0D7DE',
     borderRadius: 12,
@@ -1285,7 +1286,7 @@ const styles = StyleSheet.create({
     borderColor: '#C7D2FE',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     minWidth: 100,
   },
   optionChipActive: {
@@ -1328,7 +1329,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
@@ -1380,7 +1381,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   waterCattleCard: {
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,

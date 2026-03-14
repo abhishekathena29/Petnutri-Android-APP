@@ -374,6 +374,7 @@ export default function HerdHomeScreen() {
     }
     setCreating(true);
     setError('');
+    let openedPregnancyForm = false;
     try {
       const cattleName = form.name.trim();
       console.log('🔄 Starting profile update:', {
@@ -481,6 +482,7 @@ export default function HerdHomeScreen() {
             });
             // Don't close edit modal yet, we'll close it after pregnancy form is saved
             setShowPregnancyFormModal(true);
+            openedPregnancyForm = true;
           }
         }
       } else {
@@ -501,13 +503,13 @@ export default function HerdHomeScreen() {
         await setSelectedCattle(updatedCattle);
       }
 
-      resetForm();
-      setShowEditModal(false);
-      setEditingId(null);
-      setPreviousFemaleStatus(null);
-
-      // Only show success alert if we're not opening pregnancy form
-      if (!(form.sex === 'female' && form.femaleStatus === 'pregnant' && previousFemaleStatus !== 'pregnant')) {
+      if (openedPregnancyForm) {
+        setShowEditModal(false);
+      } else {
+        resetForm();
+        setShowEditModal(false);
+        setEditingId(null);
+        setPreviousFemaleStatus(null);
         Alert.alert('Updated! ✅', `${cattleName}'s profile has been updated.`);
       }
     } catch (err) {
@@ -881,7 +883,7 @@ export default function HerdHomeScreen() {
                           key={status}
                           style={[
                             styles.toggleChip,
-                            styles.toggleChipResponsive,
+                            { paddingHorizontal: 16 },
                             form.femaleStatus === status && styles.toggleChipActive
                           ]}
                           onPress={() => handleChange('femaleStatus', status)}
@@ -908,7 +910,7 @@ export default function HerdHomeScreen() {
                         key={level}
                         style={[
                           styles.toggleChip,
-                          styles.toggleChipResponsive,
+                          { paddingHorizontal: 16 },
                           form.activityLevel === level && styles.toggleChipActive
                         ]}
                         onPress={() => handleChange('activityLevel', level)}
@@ -1341,7 +1343,7 @@ export default function HerdHomeScreen() {
             {Platform.OS === 'web' ? (
               <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                 <View style={styles.modalHeader}>
-                  <Pressable style={styles.closeButton} onPress={() => { setShowPregnancyFormModal(false); setPregnancyForm({ dueDate: '', trimester: 'early', blockedMonths: [] }); setError(''); }}>
+                  <Pressable style={styles.closeButton} onPress={() => { setShowPregnancyFormModal(false); setPregnancyForm({ dueDate: '', trimester: 'early', blockedMonths: [] }); setError(''); setEditingId(null); resetForm(); }}>
                     <Ionicons name="close" size={24} color="#64748B" />
                   </Pressable>
                   <Text style={styles.modalTitle}>Add Pregnancy Plan</Text>
@@ -1356,7 +1358,7 @@ export default function HerdHomeScreen() {
                     {(['early', 'mid', 'late'] as const).map((trimester) => (
                       <Pressable
                         key={trimester}
-                        style={[styles.toggleChip, styles.toggleChipResponsive, pregnancyForm.trimester === trimester && styles.toggleChipActive]}
+                        style={[styles.toggleChip, { minWidth: 120 }, pregnancyForm.trimester === trimester && styles.toggleChipActive]}
                         onPress={() => {
                           setPregnancyForm((prev) => {
                             // Auto-calculate blocked months when trimester changes
@@ -1429,7 +1431,7 @@ export default function HerdHomeScreen() {
               <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
                 <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                   <View style={styles.modalHeader}>
-                    <Pressable style={styles.closeButton} onPress={() => { setShowPregnancyFormModal(false); setPregnancyForm({ dueDate: '', trimester: 'early', blockedMonths: [] }); setError(''); }}>
+                    <Pressable style={styles.closeButton} onPress={() => { setShowPregnancyFormModal(false); setPregnancyForm({ dueDate: '', trimester: 'early', blockedMonths: [] }); setError(''); setEditingId(null); resetForm(); }}>
                       <Ionicons name="close" size={24} color="#64748B" />
                     </Pressable>
                     <Text style={styles.modalTitle}>Add Pregnancy Plan</Text>
@@ -1440,11 +1442,11 @@ export default function HerdHomeScreen() {
 
                   <View style={styles.labelContainer}>
                     <Text style={styles.label}>Trimester</Text>
-                    <View style={styles.toggleRow}>
-                      {(['early', 'mid', 'late'] as const).map((trimester) => (
-                        <Pressable
-                          key={trimester}
-                          style={[styles.toggleChip, styles.toggleChipResponsive, pregnancyForm.trimester === trimester && styles.toggleChipActive]}
+                  <View style={styles.toggleRow}>
+                    {(['early', 'mid', 'late'] as const).map((trimester) => (
+                      <Pressable
+                        key={trimester}
+                        style={[styles.toggleChip, { minWidth: 120 }, pregnancyForm.trimester === trimester && styles.toggleChipActive]}
                           onPress={() => {
                             setPregnancyForm((prev) => {
                               // Auto-calculate blocked months when trimester changes
@@ -1620,7 +1622,7 @@ const DetailRow = ({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMa
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
   },
   content: {
     padding: 20,
@@ -1666,7 +1668,7 @@ const styles = StyleSheet.create({
   addCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 20,
     padding: 20,
     marginBottom: 24,
@@ -1716,7 +1718,7 @@ const styles = StyleSheet.create({
   emptyState: {
     alignItems: 'center',
     paddingVertical: 60,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 24,
     marginTop: 20,
   },
@@ -1751,7 +1753,7 @@ const styles = StyleSheet.create({
     color: '#0F172A',
   },
   profileCard: {
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 20,
     marginBottom: 12,
     shadowColor: '#000',
@@ -1765,7 +1767,7 @@ const styles = StyleSheet.create({
     }),
   },
   profileDetailCard: {
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 20,
     marginBottom: 12,
     shadowColor: '#000',
@@ -1790,7 +1792,7 @@ const styles = StyleSheet.create({
   quickActionCard: {
     flex: 1,
     minWidth: '45%',
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
@@ -1821,7 +1823,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   detailsCard: {
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 16,
     padding: 20,
     marginTop: 12,
@@ -1845,7 +1847,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -2044,6 +2046,7 @@ const styles = StyleSheet.create({
   },
   toggleRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 12,
     marginBottom: 24,
   },
@@ -2139,7 +2142,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   pickerModalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 24,
     padding: 20,
     width: '100%',
@@ -2190,7 +2193,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     borderRadius: 12,
@@ -2214,7 +2217,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   dateModalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 24,
     padding: 20,
     width: '100%',
@@ -2249,7 +2252,7 @@ const styles = StyleSheet.create({
   },
   dateScrollView: {
     height: 180,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
     borderRadius: 12,
   },
   dateOption: {
@@ -2302,7 +2305,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 2,
     borderColor: '#E2E8F0',
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
   },
   monthChipActive: {
     backgroundColor: '#E0F2FE',
@@ -2411,7 +2414,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#E2E8F0',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
   },
   secondaryText: {
     color: '#64748B',
@@ -2457,7 +2460,7 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     minWidth: '45%',
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
@@ -2474,7 +2477,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   detailsList: {
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 20,
     padding: 8,
   },
@@ -2489,7 +2492,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,

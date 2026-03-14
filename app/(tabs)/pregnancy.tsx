@@ -5,6 +5,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { SectionCard } from '@/components/ui/section-card';
 import { Tag } from '@/components/ui/tag';
+import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSelectedCattle } from '@/contexts/SelectedCattleContext';
 import { useUserCollection } from '@/hooks/use-user-collection';
@@ -64,6 +65,15 @@ export default function PregnancyScreen() {
   const [showTodoDatePicker, setShowTodoDatePicker] = useState(false);
   const [showTodoModal, setShowTodoModal] = useState(false);
   const [selectedCattleId, setSelectedCattleId] = useState<string | null>(null);
+
+  // Pregnancy Form Modal State
+  const [showPregnancyFormModal, setShowPregnancyFormModal] = useState(false);
+  const [pregnancyForm, setPregnancyForm] = useState<{ dueDate: string; trimester: 'early' | 'mid' | 'late'; blockedMonths: string[] }>({
+    dueDate: '',
+    trimester: 'early',
+    blockedMonths: [],
+  });
+  const [creating, setCreating] = useState(false);
 
   // Date picker state
   const currentYear = new Date().getFullYear();
@@ -188,6 +198,10 @@ export default function PregnancyScreen() {
   };
 
   const handleDateConfirm = () => {
+    if (showPregnancyFormModal) {
+      handlePregnancyDateConfirm();
+      return;
+    }
     const formattedDate = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`;
     handleTodoChange('calendarDate', formattedDate);
     setShowTodoDatePicker(false);
@@ -316,6 +330,89 @@ export default function PregnancyScreen() {
     } catch {
       return [];
     }
+  };
+
+  const handleCreatePregnancyPlan = async () => {
+    if (!user || !contextSelectedCattle) return;
+    if (!pregnancyForm.dueDate) {
+      setError('Please select delivery date.');
+      return;
+    }
+    if (pregnancyForm.blockedMonths.length === 0) {
+      setError('Please select at least one month to block.');
+      return;
+    }
+
+    setCreating(true);
+    setError('');
+
+    try {
+      await addUserDocument(user.uid, 'pregnancy', {
+        cattleId: contextSelectedCattle.id,
+        cattleName: contextSelectedCattle.name ?? 'Unnamed',
+        dueDate: pregnancyForm.dueDate,
+        trimester: pregnancyForm.trimester,
+        blockedMonth: pregnancyForm.blockedMonths.join(','),
+        todo: '',
+        nutritionFocus: '',
+        calendarDate: '',
+      });
+      setPregnancyForm({
+        dueDate: '',
+        trimester: 'early',
+        blockedMonths: [],
+      });
+      setShowPregnancyFormModal(false);
+      Alert.alert('Success! ✅', 'Pregnancy plan has been created.');
+    } catch (err) {
+      console.error(err);
+      setError('Unable to save. Try again.');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const togglePregnancyMonth = (month: string) => {
+    setPregnancyForm((prev) => {
+      const isSelected = prev.blockedMonths.includes(month);
+      if (isSelected) {
+        return { ...prev, blockedMonths: prev.blockedMonths.filter((m) => m !== month) };
+      } else {
+        const currentMonths = [...prev.blockedMonths, month];
+        // Sort months biologically
+        currentMonths.sort((a, b) => allMonthsList.indexOf(a) - allMonthsList.indexOf(b));
+        return { ...prev, blockedMonths: currentMonths };
+      }
+    });
+  };
+
+  const openPregnancyDatePicker = () => {
+    const dateToParse = pregnancyForm.dueDate;
+    if (dateToParse) {
+      try {
+        const date = new Date(dateToParse);
+        if (!isNaN(date.getTime())) {
+          setSelectedYear(date.getFullYear());
+          setSelectedMonth(date.getMonth());
+          setSelectedDay(date.getDate());
+        }
+      } catch {
+      }
+    }
+    // Repurpose date picker for pregnancy start date
+    setShowTodoDatePicker(true);
+  };
+
+  const handlePregnancyDateConfirm = () => {
+    const date = new Date(selectedYear, selectedMonth, selectedDay);
+    const dateStr = date.toISOString().split('T')[0];
+    setPregnancyForm((prev) => {
+      const cattleMeta = herd.find(c => c.id === contextSelectedCattle?.id);
+      const cattleType = cattleMeta?.type || 'cow';
+      const autoBlockedMonths = calculateBlockedMonthsFromTrimester(dateStr, prev.trimester, cattleType);
+      return { ...prev, dueDate: dateStr, blockedMonths: autoBlockedMonths };
+    });
+    setShowTodoDatePicker(false);
   };
 
   // Get available months/years for todo date picker based on trimester
@@ -590,7 +687,17 @@ export default function PregnancyScreen() {
               </SectionCard>
             ) : filteredPlans.length === 0 ? (
               <SectionCard title="Pregnancy">
-                <Text style={styles.helper}>No pregnancy plan found for {contextSelectedCattle.name}.</Text>
+                {contextSelectedCattle.sex === 'female' && contextSelectedCattle.femaleStatus === 'pregnant' ? (
+                  <>
+                    <Text style={styles.helper}>This cattle is marked as pregnant but has no plan.</Text>
+                    <Pressable style={styles.primaryButton} onPress={() => setShowPregnancyFormModal(true)}>
+                      <Ionicons name="add" size={20} color="#fff" />
+                      <Text style={styles.primaryText}>Create Pregnancy Plan</Text>
+                    </Pressable>
+                  </>
+                ) : (
+                  <Text style={styles.helper}>No pregnancy plan found for {contextSelectedCattle.name}.</Text>
+                )}
               </SectionCard>
             ) : groupedPlans.length === 0 ? (
               <SectionCard title="Pregnancy">
@@ -1165,6 +1272,177 @@ export default function PregnancyScreen() {
         </SafeAreaView>
       </Modal>
 
+        {/* Pregnancy Form Modal */}
+        <Modal visible={showPregnancyFormModal} animationType="slide" onRequestClose={() => setShowPregnancyFormModal(false)}>
+          <SafeAreaView style={styles.modalSafe}>
+            <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.select({ ios: 'padding', default: undefined })}>
+              {Platform.OS === 'web' ? (
+                <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                  <View style={styles.modalHeader}>
+                    <Pressable style={styles.closeButton} onPress={() => { setShowPregnancyFormModal(false); setPregnancyForm({ dueDate: '', trimester: 'early', blockedMonths: [] }); setError(''); }}>
+                      <Ionicons name="close" size={24} color="#64748B" />
+                    </Pressable>
+                    <Text style={styles.modalTitle}>Add Pregnancy Plan</Text>
+                    <View style={{ width: 40 }} />
+                  </View>
+
+                  <Text style={styles.helper}>Select trimester, blocked months, and delivery date.</Text>
+
+                  <View style={styles.labelContainer}>
+                    <Text style={styles.label}>Trimester</Text>
+                    <View style={styles.toggleRow}>
+                      {(['early', 'mid', 'late'] as const).map((trimester) => (
+                        <Pressable
+                          key={trimester}
+                          style={[styles.toggleChip, { minWidth: 120 }, pregnancyForm.trimester === trimester && styles.toggleChipActive]}
+                          onPress={() => {
+                            setPregnancyForm((prev) => {
+                              if (prev.dueDate) {
+                                const cattleType = contextSelectedCattle?.type || 'cow';
+                                const autoBlockedMonths = calculateBlockedMonthsFromTrimester(prev.dueDate, trimester, cattleType);
+                                return { ...prev, trimester, blockedMonths: autoBlockedMonths };
+                              }
+                              return { ...prev, trimester };
+                            });
+                          }}
+                        >
+                          <Text style={[styles.toggleText, pregnancyForm.trimester === trimester && styles.toggleTextActive]}>
+                            {trimester} trimester
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
+
+                  <View style={styles.labelContainer}>
+                    <Text style={styles.label}>Month to Block</Text>
+                    <Text style={styles.helperText}>Select a range (e.g., Jan to May)</Text>
+                    <View style={styles.monthRow}>
+                      {months.map((month) => {
+                        const isInRange = pregnancyForm.blockedMonths.includes(month);
+
+                        return (
+                          <Pressable key={month} style={[styles.monthChip, isInRange && styles.monthChipActive]} onPress={() => togglePregnancyMonth(month)}>
+                            <Text style={[styles.monthChipText, isInRange && styles.monthChipTextActive]}>{month}</Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                    {pregnancyForm.blockedMonths.length > 0 && (
+                      <Text style={styles.selectedMonthsText}>Selected: {formatBlockedMonths(pregnancyForm.blockedMonths.join(','))}</Text>
+                    )}
+                  </View>
+
+                  <View style={styles.labelContainer}>
+                    <Text style={styles.label}>Delivery Date</Text>
+                    <Pressable style={styles.datePickerButton} onPress={openPregnancyDatePicker}>
+                      <Text style={[styles.datePickerText, !pregnancyForm.dueDate && styles.datePickerPlaceholder]}>
+                        {pregnancyForm.dueDate ? formatDisplayDate(pregnancyForm.dueDate) : 'Select delivery date'}
+                      </Text>
+                      <Ionicons name="calendar-outline" size={20} color="#64748B" />
+                    </Pressable>
+                  </View>
+
+                  {error ? <Text style={styles.error}>{error}</Text> : null}
+
+                  <Pressable style={[styles.primaryButton, creating && { opacity: 0.6 }]} onPress={handleCreatePregnancyPlan} disabled={creating}>
+                    {creating ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <>
+                        <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                        <Text style={styles.primaryText}>Save Pregnancy Plan</Text>
+                      </>
+                    )}
+                  </Pressable>
+                </ScrollView>
+              ) : (
+                <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+                  <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                    <View style={styles.modalHeader}>
+                      <Pressable style={styles.closeButton} onPress={() => { setShowPregnancyFormModal(false); setPregnancyForm({ dueDate: '', trimester: 'early', blockedMonths: [] }); setError(''); }}>
+                        <Ionicons name="close" size={24} color="#64748B" />
+                      </Pressable>
+                      <Text style={styles.modalTitle}>Add Pregnancy Plan</Text>
+                      <View style={{ width: 40 }} />
+                    </View>
+
+                    <Text style={styles.helper}>Select trimester, blocked months, and delivery date.</Text>
+
+                    <View style={styles.labelContainer}>
+                      <Text style={styles.label}>Trimester</Text>
+                      <View style={styles.toggleRow}>
+                        {(['early', 'mid', 'late'] as const).map((trimester) => (
+                          <Pressable
+                            key={trimester}
+                            style={[styles.toggleChip, { minWidth: 120 }, pregnancyForm.trimester === trimester && styles.toggleChipActive]}
+                            onPress={() => {
+                              setPregnancyForm((prev) => {
+                                if (prev.dueDate) {
+                                  const cattleType = contextSelectedCattle?.type || 'cow';
+                                  const autoBlockedMonths = calculateBlockedMonthsFromTrimester(prev.dueDate, trimester, cattleType);
+                                  return { ...prev, trimester, blockedMonths: autoBlockedMonths };
+                                }
+                                return { ...prev, trimester };
+                              });
+                            }}
+                          >
+                            <Text style={[styles.toggleText, pregnancyForm.trimester === trimester && styles.toggleTextActive]}>
+                              {trimester} trimester
+                            </Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                    </View>
+
+                    <View style={styles.labelContainer}>
+                      <Text style={styles.label}>Month to Block</Text>
+                      <Text style={styles.helperText}>Select a range (e.g., Jan to May)</Text>
+                      <View style={styles.monthRow}>
+                        {months.map((month) => {
+                          const isInRange = pregnancyForm.blockedMonths.includes(month);
+
+                          return (
+                            <Pressable key={month} style={[styles.monthChip, isInRange && styles.monthChipActive]} onPress={() => togglePregnancyMonth(month)}>
+                              <Text style={[styles.monthChipText, isInRange && styles.monthChipTextActive]}>{month}</Text>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                      {pregnancyForm.blockedMonths.length > 0 && (
+                        <Text style={styles.selectedMonthsText}>Selected: {formatBlockedMonths(pregnancyForm.blockedMonths.join(','))}</Text>
+                      )}
+                    </View>
+
+                    <View style={styles.labelContainer}>
+                      <Text style={styles.label}>Delivery Date</Text>
+                      <Pressable style={styles.datePickerButton} onPress={openPregnancyDatePicker}>
+                        <Text style={[styles.datePickerText, !pregnancyForm.dueDate && styles.datePickerPlaceholder]}>
+                          {pregnancyForm.dueDate ? formatDisplayDate(pregnancyForm.dueDate) : 'Select delivery date'}
+                        </Text>
+                        <Ionicons name="calendar-outline" size={20} color="#64748B" />
+                      </Pressable>
+                    </View>
+
+                    {error ? <Text style={styles.error}>{error}</Text> : null}
+
+                    <Pressable style={[styles.primaryButton, creating && { opacity: 0.6 }]} onPress={handleCreatePregnancyPlan} disabled={creating}>
+                      {creating ? (
+                        <ActivityIndicator color="#fff" />
+                      ) : (
+                        <>
+                          <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                          <Text style={styles.primaryText}>Save Pregnancy Plan</Text>
+                        </>
+                      )}
+                    </Pressable>
+                  </ScrollView>
+                </TouchableWithoutFeedback>
+              )}
+            </KeyboardAvoidingView>
+          </SafeAreaView>
+        </Modal>
+
       {/* Todo Date Picker Modal - Rendered last to appear on top of Add Todo Modal */}
       <Modal visible={showTodoDatePicker} transparent animationType="fade" onRequestClose={() => setShowTodoDatePicker(false)}>
         <Pressable style={styles.dateModalOverlay} onPress={() => setShowTodoDatePicker(false)}>
@@ -1242,7 +1520,37 @@ export default function PregnancyScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 24,
+  },
+  toggleChip: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 2,
+    borderColor: AppColors.border,
+    borderRadius: 16,
+    paddingVertical: 14,
+    backgroundColor: AppColors.surface,
+  },
+  toggleChipActive: {
+    backgroundColor: '#E8EFE9',
+    borderColor: AppColors.primary,
+  },
+  toggleText: {
+    fontWeight: '700',
+    fontSize: 15,
+    color: AppColors.subtleText,
+  },
+  toggleTextActive: {
+    color: AppColors.primary,
   },
   container: {
     padding: 20,
@@ -1277,7 +1585,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#CBD5F5',
     marginRight: 10,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
   },
   cattleChipActive: {
     backgroundColor: '#FDE68A',
@@ -1289,12 +1597,6 @@ const styles = StyleSheet.create({
   },
   cattleChipTextActive: {
     color: '#92400E',
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 12,
   },
   triChip: {
     paddingHorizontal: 12,
@@ -1323,7 +1625,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#CBD5F5',
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
   },
   monthChipActive: {
     backgroundColor: '#FDE68A',
@@ -1347,7 +1649,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderWidth: 1,
     borderColor: '#D0D7DE',
     borderRadius: 12,
@@ -1356,11 +1658,11 @@ const styles = StyleSheet.create({
   },
   datePickerText: {
     fontSize: 15,
-    color: '#111',
+    color: '#0F172A',
     flex: 1,
   },
   datePickerPlaceholder: {
-    color: '#9AA0A6',
+    color: '#94A3B8',
   },
   primaryButton: {
     backgroundColor: '#D97706',
@@ -1457,7 +1759,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   todoCard: {
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 12,
     padding: 12,
     marginBottom: 8,
@@ -1482,7 +1784,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 2,
     borderColor: '#D97706',
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1533,7 +1835,7 @@ const styles = StyleSheet.create({
     elevation: 9999,
   },
   dateModalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 24,
     padding: 20,
     width: '100%',
@@ -1570,7 +1872,7 @@ const styles = StyleSheet.create({
   },
   dateScrollView: {
     height: 180,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
     borderRadius: 12,
   },
   dateOption: {
@@ -1609,10 +1911,10 @@ const styles = StyleSheet.create({
   },
   modalSafe: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 20,
@@ -1643,7 +1945,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 15,
     color: '#111',
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
   },
   todoInput: {
     minHeight: 100,
@@ -1655,7 +1957,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   pregnancyPlanCard: {
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 20,
     padding: 20,
     borderWidth: 2,
@@ -1819,7 +2121,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
@@ -1844,7 +2146,7 @@ const styles = StyleSheet.create({
   },
   // Edit Trimester Modal Styles
   editTrimesterModalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
@@ -1872,7 +2174,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   trimesterOptionCard: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
     borderRadius: 16,
     padding: 16,
     borderWidth: 2,
@@ -2005,7 +2307,7 @@ const styles = StyleSheet.create({
     minWidth: 70,
     aspectRatio: 1,
     borderRadius: 12,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
     borderWidth: 2,
     borderColor: '#E2E8F0',
     justifyContent: 'center',
@@ -2083,7 +2385,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   todosCard: {
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 20,
     padding: 20,
     borderWidth: 2,
@@ -2136,7 +2438,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   emptyTodosBoxNew: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
     borderRadius: 16,
     padding: 32,
     alignItems: 'center',
@@ -2162,7 +2464,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   todoCardNew: {
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 16,
     padding: 16,
     borderWidth: 2,
@@ -2192,7 +2494,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 2,
     borderColor: '#D97706',
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2322,7 +2624,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   historyCard: {
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
@@ -2484,7 +2786,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     padding: 12,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -2505,7 +2807,7 @@ const styles = StyleSheet.create({
     borderColor: '#D97706',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
   },
   checkboxInlineChecked: {
     backgroundColor: '#D97706',
@@ -2598,7 +2900,7 @@ const styles = StyleSheet.create({
   },
   // Active Pregnancy Layout Styles
   activePregnancyCard: {
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
     borderRadius: 20,
     padding: 20,
     marginBottom: 16,
@@ -2815,7 +3117,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 32,
     gap: 12,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
     borderRadius: 12,
     borderWidth: 2,
     borderColor: '#E2E8F0',
@@ -2833,7 +3135,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     padding: 16,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: AppColors.background,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -2854,7 +3156,7 @@ const styles = StyleSheet.create({
     borderColor: '#D97706',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
   },
   activeCheckboxChecked: {
     backgroundColor: '#D97706',

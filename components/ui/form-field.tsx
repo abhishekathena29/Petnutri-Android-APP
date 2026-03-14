@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
   },
   inputFocused: {
     borderColor: AppColors.primary,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
   },
   helper: {
     fontSize: 12,
